@@ -1,0 +1,68 @@
+{
+  "name": "@geek-fun/serverless-adapter",
+  "version": "0.0.0",
+  "description": "Adapter for web frame work express, koa, springboot to run in serverless function as backend of apigateway corss multi cloud provider like aliyun, huawei\n\n",
+  "homepage": "https://serverlessinsight.geekfun.club",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "scripts": {
+    "test": "DEBUG=serverless-adapter jest --runInBand --detectOpenHandles --coverage --coverageReporters json-summary text html lcov",
+    "test:ci": "jest --runInBand --ci --coverage --coverageReporters json-summary text html lcov",
+    "build": "tsc --build",
+    "lint:fix": "eslint --fix ./",
+    "lint:check": "eslint ./",
+    "prepare": "husky"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/geek-fun/serverless-adapter.git"
+  },
+  "author": "geekfun <support@geekfun.club>",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/geek-fun/serverless-adapter/issues"
+  },
+  "keywords": [
+    "serverless",
+    "serverless-insight",
+    "lambda",
+    "aws-lambda",
+    "azure-functions",
+    "google-cloud-functions",
+    "tencent-cloud-functions",
+    "alibaba-cloud-functions",
+    "huawei-cloud-functions",
+    "serverless-framework",
+    "serverless-management",
+    "serverless-automation",
+    "serverless-observability",
+    "serverless-tracing",
+    "serverless-offline",
+    "alibaba",
+    "tencent",
+    "azure",
+    "huawei",
+    "google",
+    "function"
+  ],
+  "dependencies": {
+    "pino": "^9.4.0",
+    "pino-pretty": "^11.2.2"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.13",
+    "@types/node": "^22.7.4",
+    "@typescript-eslint/eslint-plugin": "^8.8.0",
+    "@typescript-eslint/parser": "^8.8.0",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.2.1",
+    "globals": "^15.9.0",
+    "husky": "^9.1.6",
+    "jest": "^29.7.0",
+    "prettier": "^3.3.3",
+    "ts-jest": "^29.2.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.2"
+  }
+}
