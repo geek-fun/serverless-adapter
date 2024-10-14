@@ -3,11 +3,6 @@ import bodyParser from 'body-parser';
 import serverlessAdapter from '../src';
 import { Event, Context } from '../src/types';
 
-describe('unit test for index', function () {
-  it('should pass test', function () {
-    expect(true).toBe(true);
-  });
-});
 const defaultEvent: Event = {
   path: '/api/test',
   httpMethod: 'GET',

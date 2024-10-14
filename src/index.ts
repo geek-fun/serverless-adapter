@@ -1,74 +1,69 @@
-import { Express, Request, Response } from 'express';
+import { Express } from 'express';
+import { Writable } from 'stream';
 import { Context, Event, ServerlessAdapter } from './types';
-import serverlessHandler from './serverlessHandler';
-
-// const CONTEXT_HEADER_NAME = 'x-fc-http-context';
-
-// const getRequestHeaders = (ctx: { request: Request }) => {
-//   const request = ctx.request;
-//   const headers = { ...request.headers };
-//   return headers;
-// };
-//
-// const getSocketPath = (): string => {
-//   const socketPathSuffix = Math.random().toString(36).substring(2, 15);
-//   if (/^win/.test(process.platform)) {
-//     const path = require('path');
-//     return path.join('\\\\?\\pipe', process.cwd(), `server-${socketPathSuffix}`);
-//   } else {
-//     return `/tmp/server-${socketPathSuffix}.sock`;
-//   }
-// };
-
-// const getBody = async (request: Request): Promise<string> => {
-//   return new Promise((resolve, reject) => {
-//     if (!request.on) {
-//       resolve('');
-//     }
-//     try {
-//       getRawBody(request).then(resolve, reject);
-//     } catch (e) {
-//       reject(e);
-//     }
-//   });
-// };
-//
-// const makeResolver = (ctx) => {
-//   return data => {
-//     const response = ctx.response;
-//     if (response.setStatusCode) {
-//       response.setStatusCode(data.statusCode);
-//     } else {
-//       response.status = data.statusCode;
-//       response.statusCode = data.statusCode;
-//     }
-//     for (const key in data.headers) {
-//       if (data.headers.hasOwnProperty(key)) {
-//         const value = data.headers[key];
-//         response.setHeader(key, value);
-//       }
-//     }
-//     for (const key in data.multiValueHeaders) {
-//       const value = data.multiValueHeaders[key]
-//       response.setHeader(key, value)
-//     }
-//     if (response.send) {
-//       response.send(data.body);
-//     } else {
-//       response.end(data.body);
-//     }
-//   };
-// }
-//
+import sendRequest from './sendRequest';
+import ServerlessRequest from './serverlessRequest';
+import ServerlessResponse from './serverlessResponse';
+import { IncomingHttpHeaders } from 'http';
 
 const constructFrameworkContext = (event: Event, context: Context) => {
   console.log('constructFrameworkContext', event, context);
+  const request = new ServerlessRequest({
+    method: event.httpMethod,
+    headers: event.headers,
+    body: event.body,
+    remoteAddress: '',
+    url: event.path,
+    isBase64Encoded: event.isBase64Encoded,
+  });
+  const response = new ServerlessResponse(request);
+  return { request, response };
+};
+
+const waitForStreamComplete = (stream: Writable): Promise<Writable> => {
+  if (stream.writableFinished || stream.writableEnded) {
+    return Promise.resolve(stream);
+  }
+
+  return new Promise((resolve, reject) => {
+    stream.once('error', complete);
+    stream.once('end', complete);
+    stream.once('finish', complete);
+
+    let isComplete = false;
+
+    function complete(err?: Error) {
+      if (isComplete) {
+        return;
+      }
+
+      isComplete = true;
+
+      stream.removeListener('error', complete);
+      stream.removeListener('end', complete);
+      stream.removeListener('finish', complete);
+
+      if (err) {
+        reject(err);
+      } else {
+        resolve(stream);
+      }
+    }
+  });
+};
+
+const buildResponse = ({
+  request,
+  response,
+}: {
+  request: ServerlessRequest;
+  response: ServerlessResponse;
+}) => {
   return {
-    request: {
-      ...event,
-      get: (name: string) => event.headers[name.toLowerCase()],
-    } as unknown as Request,
-    response: {} as unknown as Response,
+    statusCode: response.statusCode,
+    body: ServerlessResponse.body(response).toString(request.isBase64Encoded ? 'base64' : 'utf8'),
+    headers: response.headers,
+    isBase64Encoded: request.isBase64Encoded,
   };
 };
 
@@ -77,18 +72,22 @@ const serverlessAdapter: ServerlessAdapter = (app: Express) => {
     const ctx = constructFrameworkContext(event, context);
 
     try {
-      return (await serverlessHandler(app, ctx)) as unknown as {
-        statusCode: number;
-        body: unknown;
-      };
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-expect-error
+      await sendRequest(app, ctx.request, ctx.response);
+      await waitForStreamComplete(ctx.response);
+      return buildResponse(ctx);
     } catch (err) {
       const errorResponse = { statusCode: 500, body: (err as Error).message };
       console.log('Error occurred during request handling:', err);
-      return errorResponse as unknown as { statusCode: number; body: unknown };
+      return errorResponse as unknown as {
+        statusCode: number;
+        body: string;
+        headers: IncomingHttpHeaders;
+        isBase64Encoded: boolean;
+      };
     }
   };
 };
 
 export default serverlessAdapter;
-
-export const hello = () => 'hello';

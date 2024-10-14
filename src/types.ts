@@ -1,4 +1,5 @@
 import { Express } from 'express';
+import { IncomingHttpHeaders } from 'http';
 
 type AliyunApiGatewayEvent = {
   path: string;
@@ -49,7 +50,12 @@ type AliyunApiGatewayContext = {
 export type Event = AliyunApiGatewayEvent;
 
 export type Context = AliyunApiGatewayContext;
-
-export type ServerlessAdapter = (
-  app: Express,
-) => (event: Event, context: Context) => Promise<{ statusCode: number; body: unknown }>;
+export type ServerlessAdapter = (app: Express) => (
+  event: Event,
+  context: Context,
+) => Promise<{
+  statusCode: number;
+  body: string;
+  headers: IncomingHttpHeaders;
+  isBase64Encoded: boolean;
+}>;
