@@ -5,6 +5,7 @@ import sendRequest from './sendRequest';
 import ServerlessRequest from './serverlessRequest';
 import ServerlessResponse from './serverlessResponse';
 import { IncomingHttpHeaders } from 'http';
+import * as url from 'node:url';
 
 const constructFrameworkContext = (event: Event, context: Context) => {
   console.log('constructFrameworkContext', event, context);
@@ -13,7 +14,10 @@ const constructFrameworkContext = (event: Event, context: Context) => {
     headers: event.headers,
     body: Buffer.from(event.body, event.isBase64Encoded ? 'base64' : 'utf8'),
     remoteAddress: '',
-    url: event.path,
+    url: url.format({
+      pathname: event.path,
+      query: event.queryParameters,
+    }),
     isBase64Encoded: event.isBase64Encoded,
   });
   const response = new ServerlessResponse(request);

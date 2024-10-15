@@ -144,20 +144,18 @@ describe('express', () => {
   });
 
   it('should match verbs', async () => {
-    app.get('/', (req: Request, res: Response) => {
+    app.get('/*', (req: Request, res: Response) => {
       res.status(200).send('foo');
     });
-    app.put('/', (req: Request, res: Response) => {
+    app.put('/*', (req: Request, res: Response) => {
       res.status(201).send('bar');
     });
 
     const response = await serverlessAdapter(app)(
-      {
-        ...defaultEvent,
-        httpMethod: 'GET',
-      },
+      { ...defaultEvent, httpMethod: 'PUT' },
       defaultContext,
     );
+
     expect(response.statusCode).toEqual(201);
     expect(response.body).toEqual('bar');
   });
