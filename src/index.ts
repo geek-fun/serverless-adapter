@@ -11,7 +11,7 @@ const constructFrameworkContext = (event: Event, context: Context) => {
   const request = new ServerlessRequest({
     method: event.httpMethod,
     headers: event.headers,
-    body: event.body,
+    body: Buffer.from(event.body, event.isBase64Encoded ? 'base64' : 'utf8'),
     remoteAddress: '',
     url: event.path,
     isBase64Encoded: event.isBase64Encoded,

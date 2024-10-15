@@ -8,7 +8,7 @@ const HTTPS_PORT = 443;
 interface ServerlessRequestOptions {
   method: string;
   url: string;
-  headers: { [key: string]: string };
+  headers: { [key: string]: string | number };
   body: Buffer | string;
   remoteAddress: string;
   isBase64Encoded: boolean;
@@ -47,18 +47,12 @@ export default class ServerlessRequest extends IncomingMessage {
       destroy: NO_OP,
     } as unknown as Socket);
 
-    // IncomingMessage has a lot of logic for when to lowercase or alias well-known header names,
-    // so we delegate to that logic here
-    const headerEntries = Object.entries(headers);
-    const rawHeaders = new Array(headerEntries.length * 2);
-    for (let i = 0; i < headerEntries.length; i++) {
-      rawHeaders[i * 2] = headerEntries[i][0];
-      rawHeaders[i * 2 + 1] = headerEntries[i][1];
-    }
-
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-expect-error
-    this._addHeaderLines(rawHeaders, rawHeaders.length);
+    const combinedHeaders = Object.fromEntries(
+      Object.entries({
+        ...headers,
+        'content-length': Buffer.byteLength(body).toString(),
+      }).map(([key, value]) => [key.toLowerCase(), value]),
+    );
 
     Object.assign(this, {
       ip: remoteAddress,
@@ -69,6 +63,7 @@ export default class ServerlessRequest extends IncomingMessage {
       method,
       body,
       url,
+      headers: combinedHeaders,
       isBase64Encoded,
     });
 
