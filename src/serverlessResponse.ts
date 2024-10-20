@@ -1,9 +1,8 @@
-// ATTRIBUTION: https://github.com/dougmoscrop/serverless-http
-
 import { IncomingHttpHeaders, ServerResponse } from 'http';
 import { IncomingMessage } from 'node:http';
 import ServerlessRequest from './serverlessRequest';
 import { Socket } from 'node:net';
+import { debug } from './common';
 
 const headerEnd = '\r\n\r\n';
 
@@ -25,8 +24,8 @@ const getString = (data: unknown): string => {
 const addData = (stream: ServerlessResponse, data: Buffer | string | Uint8Array): void => {
   try {
     stream[BODY].push(Buffer.from(data));
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (err) {
+    debug(`Error adding data to response: ${err}`);
     throw new Error(`response.write() of unexpected type: ${typeof data}`);
   }
 };

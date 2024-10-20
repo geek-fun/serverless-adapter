@@ -1,5 +1,3 @@
-// ATTRIBUTION: https://github.com/dougmoscrop/serverless-http
-
 import { IncomingMessage } from 'http';
 import { Socket } from 'net';
 
@@ -14,20 +12,13 @@ interface ServerlessRequestOptions {
   isBase64Encoded: boolean;
 }
 
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const NO_OP: (...args: any[]) => any = () => void 0;
+const NO_OP: (...args: unknown[]) => unknown = () => void 0;
 
 export default class ServerlessRequest extends IncomingMessage {
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-expect-error
   ip: string;
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-expect-error
+
   body: Buffer | string;
 
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-expect-error
   isBase64Encoded: boolean;
 
   constructor({
@@ -55,17 +46,18 @@ export default class ServerlessRequest extends IncomingMessage {
     );
 
     Object.assign(this, {
-      ip: remoteAddress,
       complete: true,
       httpVersion: '1.1',
       httpVersionMajor: '1',
       httpVersionMinor: '1',
       method,
-      body,
       url,
       headers: combinedHeaders,
-      isBase64Encoded,
     });
+
+    this.body = body;
+    this.ip = remoteAddress;
+    this.isBase64Encoded = isBase64Encoded;
 
     this._read = () => {
       this.push(body);
