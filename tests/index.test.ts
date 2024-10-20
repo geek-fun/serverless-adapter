@@ -161,7 +161,7 @@ describe('express', () => {
   });
 
   it('should serve files', async () => {
-    app.use(express.static('test'));
+    app.use(express.static('tests/fixtures'));
 
     const response = await serverlessAdapter(app)(
       {
