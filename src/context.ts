@@ -2,9 +2,11 @@ import { Context, Event } from './types';
 import ServerlessRequest from './serverlessRequest';
 import url from 'node:url';
 import ServerlessResponse from './serverlessResponse';
+import { debug } from './common';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export const constructFrameworkContext = (event: Event, _: Context) => {
+export const constructFrameworkContext = (event: Event, context: Context) => {
+  debug(`constructFrameworkContext: ${JSON.stringify({ event, context })}`);
   const request = new ServerlessRequest({
     method: event.httpMethod,
     headers: event.headers,
