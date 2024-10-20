@@ -1,8 +1,8 @@
 {
   "name": "@geek-fun/serverless-adapter",
   "version": "0.0.0",
-  "description": "Adapter for web frame work express, koa, springboot to run in serverless function as backend of apigateway corss multi cloud provider like aliyun, huawei\n\n",
-  "homepage": "https://serverlessinsight.geekfun.club",
+  "description": "Adapter for web frame work express, koa, springboot to run in serverless function as backend of apigateway cross multi cloud provider like aliyun, huawei",
+  "homepage": "https://www.geekfun.club/",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
   "scripts": {
