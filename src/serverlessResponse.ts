@@ -25,8 +25,8 @@ const getString = (data: unknown): string => {
 const addData = (stream: ServerlessResponse, data: Buffer | string | Uint8Array): void => {
   try {
     stream[BODY].push(Buffer.from(data));
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (err) {
-    console.log('Error adding data to stream', err);
     throw new Error(`response.write() of unexpected type: ${typeof data}`);
   }
 };
