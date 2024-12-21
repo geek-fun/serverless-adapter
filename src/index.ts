@@ -1,19 +1,18 @@
 import { Express } from 'express';
 import Application from 'koa';
 import { ServerlessAdapter } from './types';
-import sendRequest from './sendRequest';
 import { IncomingHttpHeaders } from 'http';
 import { constructFrameworkContext } from './context';
 import { buildResponse, waitForStreamComplete } from './transport';
+import { constructFramework } from './framework';
 
 const serverlessAdapter: ServerlessAdapter = (app: Express | Application) => {
+  const serverlessFramework = constructFramework(app);
   return async (event, context) => {
-    const { request, response } = constructFrameworkContext(event, context);
+    const { request } = constructFrameworkContext(event, context);
 
     try {
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-expect-error
-      await sendRequest(app, request, response);
+      const response = await serverlessFramework(request);
       await waitForStreamComplete(response);
       return buildResponse({ request, response });
     } catch (err) {

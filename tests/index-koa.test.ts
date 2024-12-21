@@ -1,5 +1,6 @@
 import Koa from 'koa';
 import Router from '@koa/router';
+import koaBody from 'koa-body';
 import serverlessAdapter from '../src';
 import { defaultContext, defaultEvent } from './fixtures/fcContext';
 
@@ -8,27 +9,26 @@ describe('koa', () => {
   let router: Router;
   beforeEach(() => {
     app = new Koa();
+    app.use(koaBody());
     router = new Router();
   });
 
   it('basic middleware should set statusCode and default body', async () => {
     router.get('/api/test', (ctx) => {
-      ctx.status = 200;
-      ctx.body = 'Hello, world!';
+      ctx.status = 418;
+      ctx.body = 'Hello, world koa!';
     });
     app.use(router.routes());
 
     const response = await serverlessAdapter(app)(defaultEvent, defaultContext);
 
     expect(response.statusCode).toEqual(418);
-    expect(response.body).toEqual(`I'm a teapot`);
+    expect(response.body).toEqual('Hello, world koa!');
   });
 
   it('basic middleware should get text body', async () => {
     router.get('/api/test', (ctx) => {
       ctx.status = 200;
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-expect-error
       ctx.body = ctx.request.body;
     });
     app.use(router.routes());
@@ -53,8 +53,6 @@ describe('koa', () => {
   it('basic middleware should get json body', async () => {
     router.get('/api/test', (ctx) => {
       ctx.status = 200;
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-expect-error
       ctx.body = ctx.request.body.hello;
     });
 
@@ -62,12 +60,8 @@ describe('koa', () => {
       {
         ...defaultEvent,
         httpMethod: 'GET',
-        body: JSON.stringify({
-          hello: 'world',
-        }),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        body: JSON.stringify({ hello: 'world' }),
+        headers: { 'Content-Type': 'application/json' },
       },
       defaultContext,
     );
@@ -80,7 +74,6 @@ describe('koa', () => {
     router.get('/api/test', (ctx) => {
       ctx.status = 200;
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-expect-error
       ctx.body = ctx.request.body.hello;
     });
 

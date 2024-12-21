@@ -8,10 +8,6 @@ export const waitForStreamComplete = (stream: Writable): Promise<Writable> => {
   }
 
   return new Promise((resolve, reject) => {
-    stream.once('error', complete);
-    stream.once('end', complete);
-    stream.once('finish', complete);
-
     let isComplete = false;
 
     function complete(err?: Error) {
@@ -31,6 +27,10 @@ export const waitForStreamComplete = (stream: Writable): Promise<Writable> => {
         resolve(stream);
       }
     }
+
+    stream.once('error', complete);
+    stream.once('end', complete);
+    stream.once('finish', complete);
   });
 };
 

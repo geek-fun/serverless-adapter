@@ -1,7 +1,6 @@
 import { Context, Event } from './types';
 import ServerlessRequest from './serverlessRequest';
 import url from 'node:url';
-import ServerlessResponse from './serverlessResponse';
 import { debug } from './common';
 
 // const requestRemoteAddress = (event) => {
@@ -16,6 +15,7 @@ export const constructFrameworkContext = (event: Event, context: Context) => {
   const request = new ServerlessRequest({
     method: event.httpMethod,
     headers: event.headers,
+    path: event.path,
     body:
       event.body !== undefined && event.body !== null
         ? Buffer.from(event.body, event.isBase64Encoded ? 'base64' : 'utf8')
@@ -27,7 +27,6 @@ export const constructFrameworkContext = (event: Event, context: Context) => {
     }),
     isBase64Encoded: event.isBase64Encoded,
   });
-  const response = new ServerlessResponse(request);
 
-  return { request, response };
+  return { request };
 };
