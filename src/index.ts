@@ -1,11 +1,12 @@
 import { Express } from 'express';
+import Application from 'koa';
 import { ServerlessAdapter } from './types';
 import sendRequest from './sendRequest';
 import { IncomingHttpHeaders } from 'http';
 import { constructFrameworkContext } from './context';
 import { buildResponse, waitForStreamComplete } from './transport';
 
-const serverlessAdapter: ServerlessAdapter = (app: Express) => {
+const serverlessAdapter: ServerlessAdapter = (app: Express | Application) => {
   return async (event, context) => {
     const { request, response } = constructFrameworkContext(event, context);
 
