@@ -7,12 +7,14 @@ type AliyunApiGatewayEvent = {
   headers: Record<string, string>;
   queryParameters: Record<string, string>;
   pathParameters: Record<string, string>;
-  body: string;
+  body?: string;
   isBase64Encoded: boolean;
 };
 
 type AliyunApiGatewayContext = {
   requestId: string;
+  region: string;
+  accountId: string;
   credentials: {
     accessKeyId: string;
     accessKeySecret: string;
@@ -29,9 +31,9 @@ type AliyunApiGatewayContext = {
     name: string;
     logProject: string;
     logStore: string;
+    qualifier: string;
+    versionId: string;
   };
-  region: string;
-  accountId: string;
   tracing: {
     spanContext: string;
     jaegerEndpoint: string;
@@ -48,8 +50,8 @@ type AliyunApiGatewayContext = {
 };
 
 export type Event = AliyunApiGatewayEvent;
-
 export type Context = AliyunApiGatewayContext;
+
 export type ServerlessAdapter = (app: Express) => (
   event: Event,
   context: Context,

@@ -4,13 +4,22 @@ import url from 'node:url';
 import ServerlessResponse from './serverlessResponse';
 import { debug } from './common';
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// const requestRemoteAddress = (event) => {
+//   if (event.version === '2.0') {
+//     return event.requestContext.http.sourceIp;
+//   }
+//   return event.requestContext.identity.sourceIp;
+// };
+
 export const constructFrameworkContext = (event: Event, context: Context) => {
   debug(`constructFrameworkContext: ${JSON.stringify({ event, context })}`);
   const request = new ServerlessRequest({
     method: event.httpMethod,
     headers: event.headers,
-    body: Buffer.from(event.body, event.isBase64Encoded ? 'base64' : 'utf8'),
+    body:
+      event.body !== undefined && event.body !== null
+        ? Buffer.from(event.body, event.isBase64Encoded ? 'base64' : 'utf8')
+        : undefined,
     remoteAddress: '',
     url: url.format({
       pathname: event.path,
@@ -19,5 +28,6 @@ export const constructFrameworkContext = (event: Event, context: Context) => {
     isBase64Encoded: event.isBase64Encoded,
   });
   const response = new ServerlessResponse(request);
+
   return { request, response };
 };

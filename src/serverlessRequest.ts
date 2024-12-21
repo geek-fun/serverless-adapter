@@ -7,7 +7,7 @@ interface ServerlessRequestOptions {
   method: string;
   url: string;
   headers: { [key: string]: string | number };
-  body: Buffer | string;
+  body: Buffer | string | undefined;
   remoteAddress: string;
   isBase64Encoded: boolean;
 }
@@ -17,7 +17,7 @@ const NO_OP: (...args: unknown[]) => unknown = () => void 0;
 export default class ServerlessRequest extends IncomingMessage {
   ip: string;
 
-  body: Buffer | string;
+  body: Buffer | string | undefined;
 
   isBase64Encoded: boolean;
 
@@ -41,7 +41,7 @@ export default class ServerlessRequest extends IncomingMessage {
     const combinedHeaders = Object.fromEntries(
       Object.entries({
         ...headers,
-        'content-length': Buffer.byteLength(body).toString(),
+        'content-length': Buffer.byteLength(body ?? '').toString(),
       }).map(([key, value]) => [key.toLowerCase(), value]),
     );
 
