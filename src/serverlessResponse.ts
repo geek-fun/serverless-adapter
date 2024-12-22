@@ -1,8 +1,7 @@
 import { IncomingHttpHeaders, ServerResponse } from 'http';
-import { IncomingMessage } from 'node:http';
-import ServerlessRequest from './serverlessRequest';
 import { Socket } from 'node:net';
 import { debug } from './common';
+import ServerlessRequest from './serverlessRequest';
 
 const headerEnd = '\r\n\r\n';
 
@@ -37,12 +36,8 @@ export default class ServerlessResponse extends ServerResponse {
   [BODY]: Buffer[];
   [HEADERS]: IncomingHttpHeaders;
 
-  static from(res: IncomingMessage): ServerlessResponse {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-expect-error
+  static from(res: ServerlessRequest): ServerlessResponse {
     const response = new ServerlessResponse(res);
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-expect-error
     const { statusCode = 0, headers, body } = res;
     response.statusCode = statusCode;
     response[HEADERS] = headers;

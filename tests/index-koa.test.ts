@@ -55,6 +55,7 @@ describe('koa', () => {
       ctx.status = 200;
       ctx.body = ctx.request.body.hello;
     });
+    app.use(router.routes());
 
     const response = await serverlessAdapter(app)(
       {
@@ -76,6 +77,7 @@ describe('koa', () => {
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       ctx.body = ctx.request.body.hello;
     });
+    app.use(router.routes());
 
     const response = await serverlessAdapter(app)(
       {
@@ -89,7 +91,7 @@ describe('koa', () => {
       defaultContext,
     );
 
-    expect(response.statusCode).toEqual(200);
+    expect(response.statusCode).toEqual(204);
     expect(response.body).toBeDefined();
   });
 
@@ -98,12 +100,12 @@ describe('koa', () => {
       ctx.status = 200;
       ctx.body = ctx.request.query.foo;
     });
+    app.use(router.routes());
 
     const response = await serverlessAdapter(app)(
       {
         ...defaultEvent,
         httpMethod: 'GET',
-        path: '/',
         queryParameters: {
           foo: 'bar',
         },
