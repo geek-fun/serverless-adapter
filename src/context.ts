@@ -37,7 +37,7 @@ const requestHeaders = (event: Event) => {
   //   }, initialHeader);
   // }
 
-  return Object.keys(event.headers).reduce((headers, key) => {
+  return Object.keys(event.headers ?? {}).reduce((headers, key) => {
     headers[key.toLowerCase()] = event.headers[key];
     return headers;
   }, initialHeader);
