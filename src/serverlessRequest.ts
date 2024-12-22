@@ -31,6 +31,7 @@ export default class ServerlessRequest extends IncomingMessage {
       end: NO_OP,
       destroy: NO_OP,
       path: request.path,
+      headers: request.headers,
     } as unknown as Socket);
 
     const combinedHeaders = Object.fromEntries(

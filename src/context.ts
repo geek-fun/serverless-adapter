@@ -27,13 +27,32 @@ const requestBody = (event: Event) => {
   throw new Error(`Unexpected event.body type: ${typeof event.body}`);
 };
 
+const requestHeaders = (event: Event) => {
+  const initialHeader = {} as Record<string, string>;
+
+  // if (event.multiValueHeaders) {
+  //   Object.keys(event.multiValueHeaders).reduce((headers, key) => {
+  //     headers[key.toLowerCase()] = event.multiValueHeaders[key].join(', ');
+  //     return headers;
+  //   }, initialHeader);
+  // }
+
+  return Object.keys(event.headers).reduce((headers, key) => {
+    headers[key.toLowerCase()] = event.headers[key];
+    return headers;
+  }, initialHeader);
+};
+
 export const constructFrameworkContext = (event: Event, context: Context) => {
   debug(`constructFrameworkContext: ${JSON.stringify({ event, context })}`);
+  const body = requestBody(event);
+  const headers = requestHeaders(event);
+
   const request = new ServerlessRequest({
     method: event.httpMethod,
-    headers: event.headers,
     path: event.path,
-    body: requestBody(event),
+    headers,
+    body,
     remoteAddress: '',
     url: url.format({
       pathname: event.path,

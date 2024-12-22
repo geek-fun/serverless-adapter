@@ -1,6 +1,7 @@
 import Koa from 'koa';
 import Router from '@koa/router';
 import koaBody from 'koa-body';
+import serve from 'koa-static';
 import serverlessAdapter from '../src';
 import { defaultContext, defaultEvent } from './fixtures/fcContext';
 
@@ -9,7 +10,7 @@ describe('koa', () => {
   let router: Router;
   beforeEach(() => {
     app = new Koa();
-    app.use(koaBody());
+    app.use(koaBody({ text: true, json: true, multipart: true, urlencoded: true }));
     router = new Router();
   });
 
@@ -26,8 +27,8 @@ describe('koa', () => {
     expect(response.body).toEqual('Hello, world koa!');
   });
 
-  it('basic middleware should get text body', async () => {
-    router.get('/api/test', (ctx) => {
+  it('basic middleware should parse text body', async () => {
+    router.post('/api/test', (ctx) => {
       ctx.status = 200;
       ctx.body = ctx.request.body;
     });
@@ -36,7 +37,7 @@ describe('koa', () => {
     const response = await serverlessAdapter(app)(
       {
         ...defaultEvent,
-        httpMethod: 'GET',
+        httpMethod: 'POST',
         body: 'hello, world',
         headers: {
           'Content-Type': 'text/plain',
@@ -50,8 +51,8 @@ describe('koa', () => {
     expect(response.body).toEqual('hello, world');
   });
 
-  it('basic middleware should get json body', async () => {
-    router.get('/api/test', (ctx) => {
+  it('basic middleware should parse json body', async () => {
+    router.post('/api/test', (ctx) => {
       ctx.status = 200;
       ctx.body = ctx.request.body.hello;
     });
@@ -60,7 +61,7 @@ describe('koa', () => {
     const response = await serverlessAdapter(app)(
       {
         ...defaultEvent,
-        httpMethod: 'GET',
+        httpMethod: 'POST',
         body: JSON.stringify({ hello: 'world' }),
         headers: { 'Content-Type': 'application/json' },
       },
@@ -72,7 +73,7 @@ describe('koa', () => {
   });
 
   it('basic middleware should get undefined body', async () => {
-    router.get('/api/test', (ctx) => {
+    router.post('/api/test', (ctx) => {
       ctx.status = 200;
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       ctx.body = ctx.request.body.hello;
@@ -82,7 +83,7 @@ describe('koa', () => {
     const response = await serverlessAdapter(app)(
       {
         ...defaultEvent,
-        httpMethod: 'GET',
+        httpMethod: 'POST',
         body: undefined,
         headers: {
           'Content-Type': 'application/json',
@@ -117,11 +118,11 @@ describe('koa', () => {
   });
 
   it('should match verbs', async () => {
-    router.get('/*', (ctx) => {
+    router.get('/api/test', (ctx) => {
       ctx.status = 200;
       ctx.body = 'foo';
     });
-    router.put('/*', (ctx) => {
+    router.put('/api/test', (ctx) => {
       ctx.status = 201;
       ctx.body = 'bar';
     });
@@ -136,36 +137,19 @@ describe('koa', () => {
     expect(response.body).toEqual('bar');
   });
 
-  // it('should serve files', async () => {
-  //   app.use(express.static('tests/fixtures'));
-  //
-  //   const response = await serverlessAdapter(app)(
-  //     {
-  //       ...defaultEvent,
-  //       httpMethod: 'GET',
-  //       path: '/file.txt',
-  //     },
-  //     defaultContext,
-  //   );
-  //   expect(response.statusCode).toEqual(200);
-  //   expect(response.body).toEqual('this is a test\n');
-  // });
-  //
-  // it('destroy weird', async () => {
-  //   app.use((req: Request, res: Response) => {
-  //     // this was causing a .destroy is not a function error
-  //     res.send('test');
-  //     res.json({ test: 'test' });
-  //   });
-  //
-  //   const response = await serverlessAdapter(app)(
-  //     {
-  //       ...defaultEvent,
-  //       httpMethod: 'GET',
-  //     },
-  //     defaultContext,
-  //   );
-  //   expect(response.statusCode).toEqual(200);
-  //   expect(response.body).toEqual('test');
-  // });
+  it('should serve files', async () => {
+    app.use(serve('tests/fixtures'));
+
+    const response = await serverlessAdapter(app)(
+      {
+        ...defaultEvent,
+        httpMethod: 'GET',
+        path: '/file.txt',
+      },
+      defaultContext,
+    );
+
+    expect(response.statusCode).toEqual(200);
+    expect(response.body).toEqual('this is a test\n');
+  });
 });
