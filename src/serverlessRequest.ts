@@ -6,6 +6,7 @@ const HTTPS_PORT = 443;
 interface ServerlessRequestOptions {
   method: string;
   url: string;
+  path: string;
   headers: { [key: string]: string | number };
   body: Buffer | string | undefined;
   remoteAddress: string;
@@ -21,46 +22,40 @@ export default class ServerlessRequest extends IncomingMessage {
 
   isBase64Encoded: boolean;
 
-  constructor({
-    method,
-    url,
-    headers,
-    body,
-    remoteAddress,
-    isBase64Encoded,
-  }: ServerlessRequestOptions) {
+  constructor(request: ServerlessRequestOptions) {
     super({
       encrypted: true,
       readable: false,
-      remoteAddress,
+      remoteAddress: request.remoteAddress,
       address: () => ({ port: HTTPS_PORT }),
       end: NO_OP,
       destroy: NO_OP,
+      path: request.path,
+      headers: request.headers,
     } as unknown as Socket);
 
     const combinedHeaders = Object.fromEntries(
       Object.entries({
-        ...headers,
-        'content-length': Buffer.byteLength(body ?? '').toString(),
+        ...request.headers,
+        'content-length': Buffer.byteLength(request.body ?? '').toString(),
       }).map(([key, value]) => [key.toLowerCase(), value]),
     );
 
     Object.assign(this, {
+      ...request,
       complete: true,
       httpVersion: '1.1',
       httpVersionMajor: '1',
       httpVersionMinor: '1',
-      method,
-      url,
       headers: combinedHeaders,
     });
 
-    this.body = body;
-    this.ip = remoteAddress;
-    this.isBase64Encoded = isBase64Encoded;
+    this.body = request.body;
+    this.ip = request.remoteAddress;
+    this.isBase64Encoded = request.isBase64Encoded;
 
     this._read = () => {
-      this.push(body);
+      this.push(request.body);
       this.push(null);
     };
   }

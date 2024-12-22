@@ -1,4 +1,5 @@
 import { Express } from 'express';
+import Application from 'koa';
 import { IncomingHttpHeaders } from 'http';
 
 type AliyunApiGatewayEvent = {
@@ -52,7 +53,7 @@ type AliyunApiGatewayContext = {
 export type Event = AliyunApiGatewayEvent;
 export type Context = AliyunApiGatewayContext;
 
-export type ServerlessAdapter = (app: Express) => (
+export type ServerlessAdapter = (app: Express | Application) => (
   event: Event,
   context: Context,
 ) => Promise<{
