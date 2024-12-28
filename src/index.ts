@@ -5,12 +5,14 @@ import { IncomingHttpHeaders } from 'http';
 import { constructFrameworkContext } from './context';
 import { buildResponse, waitForStreamComplete } from './transport';
 import { constructFramework } from './framework';
+import { debug } from './common';
 
 const serverlessAdapter: ServerlessAdapter = (app: Express | Application) => {
   const serverlessFramework = constructFramework(app);
   return async (event, context) => {
+    debug(`serverlessAdapter receive event: ${JSON.stringify({ event, context })}`);
     const { request } = constructFrameworkContext(event, context);
-
+    debug(`serverlessAdapter constructFrameworkContext: ${JSON.stringify({ request })}`);
     try {
       const response = await serverlessFramework(request);
       await waitForStreamComplete(response);
