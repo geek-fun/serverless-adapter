@@ -1,7 +1,7 @@
 import express, { Express, Request, Response } from 'express';
 import bodyParser from 'body-parser';
-import serverlessAdapter from '../src';
 import { defaultContext, defaultEvent } from './fixtures/fcContext';
+import { sendRequest } from './fixtures/requestHelper';
 
 describe('express', () => {
   let app: Express;
@@ -15,7 +15,7 @@ describe('express', () => {
       res.status(418).send(`I'm a teapot`);
     });
 
-    const response = await serverlessAdapter(app)(defaultEvent, defaultContext);
+    const response = await sendRequest(app, defaultEvent, defaultContext);
     expect(response.statusCode).toEqual(418);
     expect(response.body).toEqual(`I'm a teapot`);
   });
@@ -25,7 +25,8 @@ describe('express', () => {
     app.use((req: Request, res: Response) => {
       res.status(200).send(req.body);
     });
-    const response = await serverlessAdapter(app)(
+    const response = await sendRequest(
+      app,
       {
         ...defaultEvent,
         httpMethod: 'GET',
@@ -47,7 +48,8 @@ describe('express', () => {
       res.status(200).send(req.body.hello);
     });
 
-    const response = await serverlessAdapter(app)(
+    const response = await sendRequest(
+      app,
       {
         ...defaultEvent,
         httpMethod: 'GET',
@@ -71,7 +73,8 @@ describe('express', () => {
       res.status(200).send(req.body.hello);
     });
 
-    const response = await serverlessAdapter(app)(
+    const response = await sendRequest(
+      app,
       {
         ...defaultEvent,
         httpMethod: 'GET',
@@ -92,7 +95,8 @@ describe('express', () => {
       res.status(200).send(req.query.foo as string);
     });
 
-    const response = await serverlessAdapter(app)(
+    const response = await sendRequest(
+      app,
       {
         ...defaultEvent,
         httpMethod: 'GET',
@@ -115,10 +119,7 @@ describe('express', () => {
       res.status(201).send('bar');
     });
 
-    const response = await serverlessAdapter(app)(
-      { ...defaultEvent, httpMethod: 'PUT' },
-      defaultContext,
-    );
+    const response = await sendRequest(app, { ...defaultEvent, httpMethod: 'PUT' }, defaultContext);
 
     expect(response.statusCode).toEqual(201);
     expect(response.body).toEqual('bar');
@@ -127,7 +128,8 @@ describe('express', () => {
   it('should serve files', async () => {
     app.use(express.static('tests/fixtures'));
 
-    const response = await serverlessAdapter(app)(
+    const response = await sendRequest(
+      app,
       {
         ...defaultEvent,
         httpMethod: 'GET',
@@ -146,7 +148,8 @@ describe('express', () => {
       res.json({ test: 'test' });
     });
 
-    const response = await serverlessAdapter(app)(
+    const response = await sendRequest(
+      app,
       {
         ...defaultEvent,
         httpMethod: 'GET',

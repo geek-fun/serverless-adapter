@@ -2,14 +2,9 @@ import { Express } from 'express';
 import Application from 'koa';
 import { IncomingHttpHeaders } from 'http';
 
-type AliyunApiGatewayEvent = {
-  path: string;
-  httpMethod: string;
-  headers: Record<string, string>;
-  queryParameters: Record<string, string>;
-  pathParameters: Record<string, string>;
-  body?: string;
-  isBase64Encoded: boolean;
+type AliyunApiGatewayEventEvent = {
+  type: 'Buffer';
+  data: Buffer;
 };
 
 type AliyunApiGatewayContext = {
@@ -50,8 +45,18 @@ type AliyunApiGatewayContext = {
   };
 };
 
-export type Event = AliyunApiGatewayEvent;
+export type Event = AliyunApiGatewayEventEvent;
 export type Context = AliyunApiGatewayContext;
+
+export type ServerlessEvent = {
+  path: string;
+  httpMethod: string;
+  headers: Record<string, string>;
+  queryParameters: Record<string, string>;
+  pathParameters: Record<string, string>;
+  body?: string;
+  isBase64Encoded: boolean;
+};
 
 export type ServerlessAdapter = (app: Express | Application) => (
   event: Event,

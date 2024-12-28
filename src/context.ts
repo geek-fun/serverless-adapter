@@ -1,4 +1,4 @@
-import { Context, Event } from './types';
+import { ServerlessEvent, Context, Event } from './types';
 import ServerlessRequest from './serverlessRequest';
 import url from 'node:url';
 import { debug } from './common';
@@ -10,7 +10,7 @@ import { debug } from './common';
 //   return event.requestContext.identity.sourceIp;
 // };
 
-const requestBody = (event: Event) => {
+const requestBody = (event: ServerlessEvent) => {
   if (event.body === undefined || event.body === null) {
     return undefined;
   }
@@ -27,7 +27,7 @@ const requestBody = (event: Event) => {
   throw new Error(`Unexpected event.body type: ${typeof event.body}`);
 };
 
-const requestHeaders = (event: Event) => {
+const requestHeaders = (event: ServerlessEvent) => {
   const initialHeader = {} as Record<string, string>;
 
   // if (event.multiValueHeaders) {
@@ -43,8 +43,9 @@ const requestHeaders = (event: Event) => {
   }, initialHeader);
 };
 
-export const constructFrameworkContext = (event: Event, context: Context) => {
-  debug(`constructFrameworkContext: ${JSON.stringify({ event, context })}`);
+export const constructFrameworkContext = (rawEvent: Event, rawContext: Context) => {
+  debug(`constructFrameworkContext: ${JSON.stringify({ rawEvent, rawContext })}`);
+  const event = JSON.parse(Buffer.from(rawEvent['data']).toString()) as ServerlessEvent;
   const body = requestBody(event);
   const headers = requestHeaders(event);
 

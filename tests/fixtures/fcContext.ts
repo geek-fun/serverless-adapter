@@ -1,6 +1,6 @@
-import { Context, Event } from '../../src/types';
+import { Context, ServerlessEvent } from '../../src/types';
 
-export const defaultEvent: Event = {
+export const defaultEvent: ServerlessEvent = {
   path: '/api/test',
   httpMethod: 'GET',
   headers: {

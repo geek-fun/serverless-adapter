@@ -2,8 +2,8 @@ import Koa from 'koa';
 import Router from '@koa/router';
 import koaBody from 'koa-body';
 import serve from 'koa-static';
-import serverlessAdapter from '../src';
 import { defaultContext, defaultEvent } from './fixtures/fcContext';
+import { sendRequest } from './fixtures/requestHelper';
 
 describe('koa', () => {
   let app: Koa;
@@ -21,7 +21,7 @@ describe('koa', () => {
     });
     app.use(router.routes());
 
-    const response = await serverlessAdapter(app)(defaultEvent, defaultContext);
+    const response = await sendRequest(app, defaultEvent, defaultContext);
 
     expect(response.statusCode).toEqual(418);
     expect(response.body).toEqual('Hello, world koa!');
@@ -34,7 +34,8 @@ describe('koa', () => {
     });
     app.use(router.routes());
 
-    const response = await serverlessAdapter(app)(
+    const response = await sendRequest(
+      app,
       {
         ...defaultEvent,
         httpMethod: 'POST',
@@ -58,7 +59,8 @@ describe('koa', () => {
     });
     app.use(router.routes());
 
-    const response = await serverlessAdapter(app)(
+    const response = await sendRequest(
+      app,
       {
         ...defaultEvent,
         httpMethod: 'POST',
@@ -80,7 +82,8 @@ describe('koa', () => {
     });
     app.use(router.routes());
 
-    const response = await serverlessAdapter(app)(
+    const response = await sendRequest(
+      app,
       {
         ...defaultEvent,
         httpMethod: 'POST',
@@ -103,7 +106,8 @@ describe('koa', () => {
     });
     app.use(router.routes());
 
-    const response = await serverlessAdapter(app)(
+    const response = await sendRequest(
+      app,
       {
         ...defaultEvent,
         httpMethod: 'GET',
@@ -128,10 +132,7 @@ describe('koa', () => {
     });
     app.use(router.routes());
 
-    const response = await serverlessAdapter(app)(
-      { ...defaultEvent, httpMethod: 'PUT' },
-      defaultContext,
-    );
+    const response = await sendRequest(app, { ...defaultEvent, httpMethod: 'PUT' }, defaultContext);
 
     expect(response.statusCode).toEqual(201);
     expect(response.body).toEqual('bar');
@@ -140,7 +141,8 @@ describe('koa', () => {
   it('should serve files', async () => {
     app.use(serve('tests/fixtures'));
 
-    const response = await serverlessAdapter(app)(
+    const response = await sendRequest(
+      app,
       {
         ...defaultEvent,
         httpMethod: 'GET',
