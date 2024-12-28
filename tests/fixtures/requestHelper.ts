@@ -8,11 +8,5 @@ export const sendRequest = async (
   event: Record<string, unknown>,
   context: Record<string, unknown>,
 ) => {
-  return serverlessAdapter(app)(
-    {
-      type: 'Buffer',
-      data: Buffer.from(JSON.stringify(event)),
-    },
-    context as Context,
-  );
+  return serverlessAdapter(app)(Buffer.from(JSON.stringify(event)), context as Context);
 };

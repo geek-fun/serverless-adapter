@@ -2,11 +2,6 @@ import { Express } from 'express';
 import Application from 'koa';
 import { IncomingHttpHeaders } from 'http';
 
-type AliyunApiGatewayEventEvent = {
-  type: 'Buffer';
-  data: Buffer;
-};
-
 type AliyunApiGatewayContext = {
   requestId: string;
   region: string;
@@ -45,7 +40,7 @@ type AliyunApiGatewayContext = {
   };
 };
 
-export type Event = AliyunApiGatewayEventEvent;
+export type Event = Buffer;
 export type Context = AliyunApiGatewayContext;
 
 export type ServerlessEvent = {
@@ -54,7 +49,7 @@ export type ServerlessEvent = {
   headers: Record<string, string>;
   queryParameters: Record<string, string>;
   pathParameters: Record<string, string>;
-  body?: string;
+  body: string | undefined;
   isBase64Encoded: boolean;
 };
 
