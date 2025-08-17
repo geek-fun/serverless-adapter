@@ -1,5 +1,3 @@
-import { Express } from 'express';
-import Application from 'koa';
 import ServerlessResponse from './serverlessResponse';
 import ServerlessRequest from './serverlessRequest';
 
@@ -14,10 +12,13 @@ const callableFn = (callback: (req: any, res: any) => Promise<void>) => {
   };
 };
 
-export const constructFramework = (app: Express | Application) => {
-  if (app instanceof Application) {
+// eslint-disable-next-line
+export const constructFramework = (app: any) => {
+  if (typeof app.callback === 'function') {
+    // Koa
     return callableFn(app.callback());
   } else if (typeof app === 'function') {
+    // Express
     return callableFn(app);
   } else {
     throw new Error(`Unsupported framework ${app}`);
