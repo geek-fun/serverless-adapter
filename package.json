@@ -47,7 +47,7 @@
   ],
   "dependencies": {
     "debug": "^4.4.0",
-    "raw-body": "^3.0.0"
+    "raw-body": "^3.0.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.12.0",
