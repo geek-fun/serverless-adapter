@@ -46,7 +46,7 @@
     "function"
   ],
   "dependencies": {
-    "debug": "^4.4.0",
+    "debug": "^4.4.3",
     "raw-body": "^3.0.1"
   },
   "devDependencies": {
