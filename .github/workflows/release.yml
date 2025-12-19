@@ -14,7 +14,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ ubuntu-latest ]
-        node-version: [ 20.x ]
+        node-version: [ 24.x ]
 
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
@@ -58,6 +58,4 @@ jobs:
             ${{ steps.changelog.outputs.changelog }}
       - name: Publish package on NPM 📦
         if: steps.tag_release.outputs.successful == 'true'
-        run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public
