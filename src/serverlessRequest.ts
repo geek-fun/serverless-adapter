@@ -1,5 +1,6 @@
 import { IncomingMessage } from 'http';
 import { Socket } from 'net';
+import { Duplex } from 'stream';
 
 const HTTPS_PORT = 443;
 
@@ -15,6 +16,23 @@ interface ServerlessRequestOptions {
 
 const NO_OP: (...args: unknown[]) => unknown = () => void 0;
 
+const createMockSocket = (remoteAddress: string) => {
+  const stream = new Duplex({
+    read() {},
+    write(_chunk, _encoding, callback) {
+      callback();
+    },
+  });
+  return Object.assign(stream, {
+    encrypted: true,
+    readable: true,
+    remoteAddress,
+    address: () => ({ port: HTTPS_PORT }),
+    end: NO_OP,
+    destroy: NO_OP,
+  }) as unknown as Socket;
+};
+
 export default class ServerlessRequest extends IncomingMessage {
   ip: string;
 
@@ -23,16 +41,7 @@ export default class ServerlessRequest extends IncomingMessage {
   isBase64Encoded: boolean;
 
   constructor(request: ServerlessRequestOptions) {
-    super({
-      encrypted: true,
-      readable: false,
-      remoteAddress: request.remoteAddress,
-      address: () => ({ port: HTTPS_PORT }),
-      end: NO_OP,
-      destroy: NO_OP,
-      path: request.path,
-      headers: request.headers,
-    } as unknown as Socket);
+    super(createMockSocket(request.remoteAddress));
 
     const combinedHeaders = Object.fromEntries(
       Object.entries({
@@ -43,7 +52,6 @@ export default class ServerlessRequest extends IncomingMessage {
 
     Object.assign(this, {
       ...request,
-      complete: true,
       httpVersion: '1.1',
       httpVersionMajor: '1',
       httpVersionMinor: '1',
@@ -54,9 +62,15 @@ export default class ServerlessRequest extends IncomingMessage {
     this.ip = request.remoteAddress;
     this.isBase64Encoded = request.isBase64Encoded;
 
+    let bodyPushed = false;
     this._read = () => {
-      this.push(request.body);
-      this.push(null);
+      if (!bodyPushed) {
+        bodyPushed = true;
+        if (request.body) {
+          this.push(request.body);
+        }
+        this.push(null);
+      }
     };
   }
 }

@@ -1,12 +1,13 @@
-import { Express } from 'express';
-import Application from 'koa';
 import serverlessAdapter from '../../src';
 import { Context } from '../../src/types';
 
 export const sendRequest = async (
-  app: Express | Application,
+  app: unknown,
   event: Record<string, unknown>,
   context: Record<string, unknown>,
 ) => {
-  return serverlessAdapter(app)(Buffer.from(JSON.stringify(event)), context as Context);
+  return serverlessAdapter(app as Parameters<typeof serverlessAdapter>[0])(
+    Buffer.from(JSON.stringify(event)),
+    context as Context,
+  );
 };

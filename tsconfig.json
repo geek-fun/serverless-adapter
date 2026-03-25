@@ -9,8 +9,15 @@
     "skipLibCheck": true,
     "outDir": "./dist",
     "rootDir": "./",
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "typeRoots": ["./node_modules/@types", "./types"],
+    "paths": {
+      "express4": ["node_modules/express4"],
+      "express5": ["node_modules/express5"],
+      "koa2": ["node_modules/koa2"],
+      "koa3": ["node_modules/koa3"]
+    }
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "tests/**/*", "types/**/*"]
 }
-

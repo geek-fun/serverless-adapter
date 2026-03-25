@@ -1,35 +1,44 @@
-import express, { Express, Request, Response } from 'express';
-import bodyParser from 'body-parser';
+import Koa from 'koa3';
+import Router from '@koa/router';
+import koaBody from 'koa-body';
+import serve from 'koa-static';
 import { defaultContext, defaultEvent } from './fixtures/fcContext';
 import { sendRequest } from './fixtures/requestHelper';
 
-describe('express', () => {
-  let app: Express;
-
+describe('koa 3.x', () => {
+  let app: Koa;
+  let router: Router;
   beforeEach(() => {
-    app = express();
+    app = new Koa();
+    app.use(koaBody({ text: true, json: true, multipart: true, urlencoded: true }));
+    router = new Router();
   });
 
   it('basic middleware should set statusCode and default body', async () => {
-    app.use((req: Request, res: Response) => {
-      res.status(418).send(`I'm a teapot`);
+    router.get('/api/test', (ctx) => {
+      ctx.status = 418;
+      ctx.body = 'Hello, world koa!';
     });
+    app.use(router.routes());
 
     const response = await sendRequest(app, defaultEvent, defaultContext);
+
     expect(response.statusCode).toEqual(418);
-    expect(response.body).toEqual(`I'm a teapot`);
+    expect(response.body).toEqual('Hello, world koa!');
   });
 
-  it('basic middleware should get text body', async () => {
-    app.use(bodyParser.text());
-    app.use((req: Request, res: Response) => {
-      res.status(200).send(req.body);
+  it('basic middleware should parse text body', async () => {
+    router.post('/api/test', (ctx) => {
+      ctx.status = 200;
+      ctx.body = ctx.request.body;
     });
+    app.use(router.routes());
+
     const response = await sendRequest(
       app,
       {
         ...defaultEvent,
-        httpMethod: 'GET',
+        httpMethod: 'POST',
         body: 'hello, world',
         headers: {
           'Content-Type': 'text/plain',
@@ -38,27 +47,25 @@ describe('express', () => {
       },
       defaultContext,
     );
+
     expect(response.statusCode).toEqual(200);
     expect(response.body).toEqual('hello, world');
   });
 
-  it('basic middleware should get json body', async () => {
-    app.use(bodyParser.json());
-    app.use((req: Request, res: Response) => {
-      res.status(200).send(req.body.hello);
+  it('basic middleware should parse json body', async () => {
+    router.post('/api/test', (ctx) => {
+      ctx.status = 200;
+      ctx.body = ctx.request.body.hello;
     });
+    app.use(router.routes());
 
     const response = await sendRequest(
       app,
       {
         ...defaultEvent,
-        httpMethod: 'GET',
-        body: JSON.stringify({
-          hello: 'world',
-        }),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        httpMethod: 'POST',
+        body: JSON.stringify({ hello: 'world' }),
+        headers: { 'Content-Type': 'application/json' },
       },
       defaultContext,
     );
@@ -68,16 +75,17 @@ describe('express', () => {
   });
 
   it('basic middleware should get undefined body', async () => {
-    app.use(bodyParser.json());
-    app.use((req: Request, res: Response) => {
-      res.status(200).send(req.body.hello);
+    router.post('/api/test', (ctx) => {
+      ctx.status = 200;
+      ctx.body = ctx.request.body?.hello;
     });
+    app.use(router.routes());
 
     const response = await sendRequest(
       app,
       {
         ...defaultEvent,
-        httpMethod: 'GET',
+        httpMethod: 'POST',
         body: undefined,
         headers: {
           'Content-Type': 'application/json',
@@ -86,21 +94,22 @@ describe('express', () => {
       defaultContext,
     );
 
-    expect(response.statusCode).toEqual(200);
+    expect(response.statusCode).toEqual(204);
     expect(response.body).toBeDefined();
   });
 
   it('basic middleware should get query params', async () => {
-    app.use((req: Request, res: Response) => {
-      res.status(200).send(req.query.foo as string);
+    router.get('/api/test', (ctx) => {
+      ctx.status = 200;
+      ctx.body = ctx.request.query.foo;
     });
+    app.use(router.routes());
 
     const response = await sendRequest(
       app,
       {
         ...defaultEvent,
         httpMethod: 'GET',
-        path: '/',
         queryParameters: {
           foo: 'bar',
         },
@@ -112,12 +121,15 @@ describe('express', () => {
   });
 
   it('should match verbs', async () => {
-    app.get('/*', (req: Request, res: Response) => {
-      res.status(200).send('foo');
+    router.get('/api/test', (ctx) => {
+      ctx.status = 200;
+      ctx.body = 'foo';
     });
-    app.put('/*', (req: Request, res: Response) => {
-      res.status(201).send('bar');
+    router.put('/api/test', (ctx) => {
+      ctx.status = 201;
+      ctx.body = 'bar';
     });
+    app.use(router.routes());
 
     const response = await sendRequest(app, { ...defaultEvent, httpMethod: 'PUT' }, defaultContext);
 
@@ -126,7 +138,7 @@ describe('express', () => {
   });
 
   it('should serve files', async () => {
-    app.use(express.static('tests/fixtures'));
+    app.use(serve('tests/fixtures'));
 
     const response = await sendRequest(
       app,
@@ -137,26 +149,8 @@ describe('express', () => {
       },
       defaultContext,
     );
+
     expect(response.statusCode).toEqual(200);
     expect(response.body).toEqual('this is a test\n');
-  });
-
-  it('destroy weird', async () => {
-    app.use((req: Request, res: Response) => {
-      // this was causing a .destroy is not a function error
-      res.send('test');
-      res.json({ test: 'test' });
-    });
-
-    const response = await sendRequest(
-      app,
-      {
-        ...defaultEvent,
-        httpMethod: 'GET',
-      },
-      defaultContext,
-    );
-    expect(response.statusCode).toEqual(200);
-    expect(response.body).toEqual('test');
   });
 });
