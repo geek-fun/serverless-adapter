@@ -2,6 +2,13 @@ import express, { Express, Request, Response } from 'express';
 import bodyParser from 'body-parser';
 import { defaultContext, defaultEvent } from './fixtures/fcContext';
 import { sendRequest } from './fixtures/requestHelper';
+import { constructFrameworkContext } from '../src/context';
+import { Context } from '../src/types';
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const onFinished = require('on-finished');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const getRawBody = require('raw-body');
 
 describe('express', () => {
   let app: Express;
@@ -158,5 +165,57 @@ describe('express', () => {
     );
     expect(response.statusCode).toEqual(200);
     expect(response.body).toEqual('test');
+  });
+
+  it('serverless request should not be marked as finished before body is consumed', () => {
+    const event = {
+      ...defaultEvent,
+      httpMethod: 'POST',
+      body: JSON.stringify({ hello: 'world' }),
+      headers: { 'Content-Type': 'application/json' },
+    };
+    const { request } = constructFrameworkContext(
+      Buffer.from(JSON.stringify(event)),
+      defaultContext as Context,
+    );
+    expect(onFinished.isFinished(request)).toBe(false);
+  });
+
+  it('serverless request body should be readable via raw-body (express 5 compat)', async () => {
+    const event = {
+      ...defaultEvent,
+      httpMethod: 'POST',
+      body: JSON.stringify({ hello: 'world' }),
+      headers: { 'Content-Type': 'application/json' },
+    };
+    const { request } = constructFrameworkContext(
+      Buffer.from(JSON.stringify(event)),
+      defaultContext as Context,
+    );
+    const body = await getRawBody(request, { encoding: 'utf-8' });
+    expect(JSON.parse(body)).toEqual({ hello: 'world' });
+  });
+
+  it('express.json() should parse json body (express 5 compat)', async () => {
+    app.use(express.json());
+    app.use((req: Request, res: Response) => {
+      res.status(200).send(req.body.hello);
+    });
+
+    const response = await sendRequest(
+      app,
+      {
+        ...defaultEvent,
+        httpMethod: 'POST',
+        body: JSON.stringify({ hello: 'world' }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      },
+      defaultContext,
+    );
+
+    expect(response.statusCode).toEqual(200);
+    expect(response.body).toEqual('world');
   });
 });
