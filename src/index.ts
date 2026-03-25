@@ -1,32 +1,72 @@
 import { Express } from 'express';
 import Application from 'koa';
-import { ServerlessAdapter } from './types';
 import { IncomingHttpHeaders } from 'http';
-import { constructFrameworkContext } from './context';
-import { buildResponse, waitForStreamComplete } from './transport';
 import { constructFramework } from './framework';
+import { waitForStreamComplete, buildResponse } from './transport';
+import { detectProvider, getProvider } from './providers';
 import { debug } from './common';
+import { CloudProvider, ProviderEvent, ProviderContext, ServerlessResponse } from './types';
 
-const serverlessAdapter: ServerlessAdapter = (app: Express | Application) => {
+export interface ServerlessAdapterOptions {
+  provider?: CloudProvider;
+}
+
+type HandlerResult = {
+  statusCode: number;
+  body: string;
+  headers: IncomingHttpHeaders;
+  isBase64Encoded: boolean;
+};
+
+type Handler = (event: ProviderEvent, context: ProviderContext) => Promise<HandlerResult>;
+
+const serverlessAdapter = (
+  app: Express | Application,
+  options?: ServerlessAdapterOptions,
+): Handler => {
   const serverlessFramework = constructFramework(app);
-  return async (event, context) => {
+
+  return async (event: ProviderEvent, context: ProviderContext): Promise<HandlerResult> => {
     debug(`serverlessAdapter receive event: ${JSON.stringify({ event, context })}`);
-    const { request } = constructFrameworkContext(event, context);
-    debug(`serverlessAdapter constructFrameworkContext: ${JSON.stringify({ request })}`);
+
+    const provider = options?.provider
+      ? getProvider(options.provider)
+      : detectProvider(event, context);
+
+    if (!provider) {
+      throw new Error('Unable to detect cloud provider. Please specify provider option.');
+    }
+
+    debug(`serverlessAdapter: Using provider: ${provider.name}`);
+
     try {
+      const normalizedEvent = provider.normalizeEvent(event);
+      const { request, isBase64Encoded } = provider.createRequest(normalizedEvent);
+
+      debug(`serverlessAdapter normalizedEvent: ${JSON.stringify(normalizedEvent)}`);
+
       const response = await serverlessFramework(request);
       await waitForStreamComplete(response);
-      return buildResponse({ request, response });
+
+      const builtResponse = buildResponse({ request, response });
+      const formattedResponse = provider.formatResponse({
+        ...builtResponse,
+        isBase64Encoded,
+      } as ServerlessResponse) as HandlerResult;
+
+      return formattedResponse;
     } catch (err) {
-      const errorResponse = { statusCode: 500, body: (err as Error).message };
-      return errorResponse as unknown as {
-        statusCode: number;
-        body: string;
-        headers: IncomingHttpHeaders;
-        isBase64Encoded: boolean;
+      return {
+        statusCode: 500,
+        body: (err as Error).message,
+        headers: {},
+        isBase64Encoded: false,
       };
     }
   };
 };
 
 export default serverlessAdapter;
+
+export * from './types';
+export * from './providers';
