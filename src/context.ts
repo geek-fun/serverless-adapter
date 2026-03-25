@@ -3,12 +3,17 @@ import ServerlessRequest from './serverlessRequest';
 import url from 'node:url';
 import { debug } from './common';
 
-// const requestRemoteAddress = (event) => {
-//   if (event.version === '2.0') {
-//     return event.requestContext.http.sourceIp;
-//   }
-//   return event.requestContext.identity.sourceIp;
-// };
+const requestRemoteAddress = (headers: Record<string, string>): string => {
+  const forwardedFor = headers['x-forwarded-for'];
+  if (forwardedFor) {
+    return forwardedFor.split(',')[0].trim();
+  }
+  const realIp = headers['x-real-ip'];
+  if (realIp) {
+    return realIp.trim();
+  }
+  return '';
+};
 
 const requestBody = (event: ServerlessEvent) => {
   if (!event.body) {
@@ -48,13 +53,14 @@ export const constructFrameworkContext = (rawEvent: Buffer, rawContext: Context)
   const event = JSON.parse(Buffer.from(rawEvent).toString()) as ServerlessEvent;
   const body = requestBody(event);
   const headers = requestHeaders(event);
+  const remoteAddress = requestRemoteAddress(headers);
 
   const request = new ServerlessRequest({
     method: event.httpMethod,
     path: event.path,
     headers,
     body,
-    remoteAddress: '',
+    remoteAddress,
     url: url.format({
       pathname: event.path,
       query: event.queryParameters,
