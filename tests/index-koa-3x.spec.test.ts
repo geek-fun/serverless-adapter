@@ -1,11 +1,11 @@
-import Koa from 'koa';
+import Koa from 'koa3';
 import Router from '@koa/router';
 import koaBody from 'koa-body';
 import serve from 'koa-static';
 import { defaultContext, defaultEvent } from './fixtures/fcContext';
 import { sendRequest } from './fixtures/requestHelper';
 
-describe('koa', () => {
+describe('koa 3.x', () => {
   let app: Koa;
   let router: Router;
   beforeEach(() => {
@@ -77,8 +77,7 @@ describe('koa', () => {
   it('basic middleware should get undefined body', async () => {
     router.post('/api/test', (ctx) => {
       ctx.status = 200;
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      ctx.body = ctx.request.body.hello;
+      ctx.body = ctx.request.body?.hello;
     });
     app.use(router.routes());
 

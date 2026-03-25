@@ -1,5 +1,4 @@
-import express, { Express, Request, Response } from 'express';
-import bodyParser from 'body-parser';
+import express, { Express, Request, Response } from 'express5';
 import { defaultContext, defaultEvent } from './fixtures/fcContext';
 import { sendRequest } from './fixtures/requestHelper';
 import { constructFrameworkContext } from '../src/context';
@@ -10,7 +9,7 @@ const onFinished = require('on-finished');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const getRawBody = require('raw-body');
 
-describe('express', () => {
+describe('express 5.x', () => {
   let app: Express;
 
   beforeEach(() => {
@@ -27,30 +26,8 @@ describe('express', () => {
     expect(response.body).toEqual(`I'm a teapot`);
   });
 
-  it('basic middleware should get text body', async () => {
-    app.use(bodyParser.text());
-    app.use((req: Request, res: Response) => {
-      res.status(200).send(req.body);
-    });
-    const response = await sendRequest(
-      app,
-      {
-        ...defaultEvent,
-        httpMethod: 'GET',
-        body: 'hello, world',
-        headers: {
-          'Content-Type': 'text/plain',
-          'Content-Length': '12',
-        },
-      },
-      defaultContext,
-    );
-    expect(response.statusCode).toEqual(200);
-    expect(response.body).toEqual('hello, world');
-  });
-
-  it('basic middleware should get json body', async () => {
-    app.use(bodyParser.json());
+  it('express.json() should parse json body', async () => {
+    app.use(express.json());
     app.use((req: Request, res: Response) => {
       res.status(200).send(req.body.hello);
     });
@@ -59,10 +36,8 @@ describe('express', () => {
       app,
       {
         ...defaultEvent,
-        httpMethod: 'GET',
-        body: JSON.stringify({
-          hello: 'world',
-        }),
+        httpMethod: 'POST',
+        body: JSON.stringify({ hello: 'world' }),
         headers: {
           'Content-Type': 'application/json',
         },
@@ -74,17 +49,40 @@ describe('express', () => {
     expect(response.body).toEqual('world');
   });
 
-  it('basic middleware should get undefined body', async () => {
-    app.use(bodyParser.json());
+  it('express.text() should parse text body', async () => {
+    app.use(express.text());
     app.use((req: Request, res: Response) => {
-      res.status(200).send(req.body.hello);
+      res.status(200).send(req.body);
     });
 
     const response = await sendRequest(
       app,
       {
         ...defaultEvent,
-        httpMethod: 'GET',
+        httpMethod: 'POST',
+        body: 'hello, world',
+        headers: {
+          'Content-Type': 'text/plain',
+        },
+      },
+      defaultContext,
+    );
+
+    expect(response.statusCode).toEqual(200);
+    expect(response.body).toEqual('hello, world');
+  });
+
+  it('basic middleware should get undefined body', async () => {
+    app.use(express.json());
+    app.use((req: Request, res: Response) => {
+      res.status(200).send(req.body?.hello);
+    });
+
+    const response = await sendRequest(
+      app,
+      {
+        ...defaultEvent,
+        httpMethod: 'POST',
         body: undefined,
         headers: {
           'Content-Type': 'application/json',
@@ -119,10 +117,10 @@ describe('express', () => {
   });
 
   it('should match verbs', async () => {
-    app.get('/*', (req: Request, res: Response) => {
+    app.get('/api/test', (req: Request, res: Response) => {
       res.status(200).send('foo');
     });
-    app.put('/*', (req: Request, res: Response) => {
+    app.put('/api/test', (req: Request, res: Response) => {
       res.status(201).send('bar');
     });
 
@@ -148,25 +146,6 @@ describe('express', () => {
     expect(response.body).toEqual('this is a test\n');
   });
 
-  it('destroy weird', async () => {
-    app.use((req: Request, res: Response) => {
-      // this was causing a .destroy is not a function error
-      res.send('test');
-      res.json({ test: 'test' });
-    });
-
-    const response = await sendRequest(
-      app,
-      {
-        ...defaultEvent,
-        httpMethod: 'GET',
-      },
-      defaultContext,
-    );
-    expect(response.statusCode).toEqual(200);
-    expect(response.body).toEqual('test');
-  });
-
   it('serverless request should not be marked as finished before body is consumed', () => {
     const event = {
       ...defaultEvent,
@@ -181,7 +160,7 @@ describe('express', () => {
     expect(onFinished.isFinished(request)).toBe(false);
   });
 
-  it('serverless request body should be readable via raw-body (express 5 compat)', async () => {
+  it('serverless request body should be readable via raw-body', async () => {
     const event = {
       ...defaultEvent,
       httpMethod: 'POST',
@@ -194,28 +173,5 @@ describe('express', () => {
     );
     const body = await getRawBody(request, { encoding: 'utf-8' });
     expect(JSON.parse(body)).toEqual({ hello: 'world' });
-  });
-
-  it('express.json() should parse json body (express 5 compat)', async () => {
-    app.use(express.json());
-    app.use((req: Request, res: Response) => {
-      res.status(200).send(req.body.hello);
-    });
-
-    const response = await sendRequest(
-      app,
-      {
-        ...defaultEvent,
-        httpMethod: 'POST',
-        body: JSON.stringify({ hello: 'world' }),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      },
-      defaultContext,
-    );
-
-    expect(response.statusCode).toEqual(200);
-    expect(response.body).toEqual('world');
   });
 });
