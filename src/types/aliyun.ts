@@ -1,8 +1,10 @@
-import { Express } from 'express';
-import Application from 'koa';
 import { IncomingHttpHeaders } from 'http';
 
-type AliyunApiGatewayContext = {
+/**
+ * Aliyun Function Compute Context
+ * @see https://help.aliyun.com/document_detail/426594.html
+ */
+export type AliyunApiGatewayContext = {
   requestId: string;
   region: string;
   accountId: string;
@@ -40,25 +42,17 @@ type AliyunApiGatewayContext = {
   };
 };
 
-export type Event = Buffer;
-export type Context = AliyunApiGatewayContext;
+/**
+ * Aliyun Function Compute Event (Buffer containing JSON)
+ */
+export type AliyunEvent = Buffer;
 
-export type ServerlessEvent = {
-  path: string;
-  httpMethod: string;
-  headers: Record<string, string>;
-  queryParameters: Record<string, string>;
-  pathParameters: Record<string, string>;
-  body: string | undefined;
-  isBase64Encoded: boolean;
-};
-
-export type ServerlessAdapter = (app: Express | Application) => (
-  event: Event,
-  context: Context,
-) => Promise<{
+/**
+ * Aliyun Function Compute Response
+ */
+export interface AliyunResponse {
   statusCode: number;
   body: string;
   headers: IncomingHttpHeaders;
   isBase64Encoded: boolean;
-}>;
+}

@@ -7,24 +7,142 @@
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![codecov](https://codecov.io/gh/geek-fun/serverless-adapter/graph/badge.svg?token=lw1AJuX9S9)](https://codecov.io/gh/geek-fun/serverless-adapter)
 
-Adapter for web framework express, koa, springboot to run on top of serverless API Gateway and Functions cross different
-cloud provider like aliyun, huawei
+Adapter for web frameworks (Express, Koa) to run on serverless platforms across multiple cloud providers with automatic provider detection.
+
+## Supported Cloud Providers
+
+| Provider               | Service                         | Status       | Trigger Type |
+| ---------------------- | ------------------------------- | ------------ | ------------ |
+| Alibaba Cloud (Aliyun) | Function Compute                | ✅ Supported | API Gateway  |
+| Tencent Cloud          | Serverless Cloud Function (SCF) | ✅ Supported | API Gateway  |
+
+## Supported Frameworks
+
+| Framework | Version | Status       |
+| --------- | ------- | ------------ |
+| Express   | 4.x     | ✅ Supported |
+| Express   | 5.x     | ✅ Supported |
+| Koa       | 2.x     | ✅ Supported |
+| Koa       | 3.x     | ✅ Supported |
 
 ## Quick Start
 
-### prerequisites
+### Prerequisites
 
 - Node.js >= 16.x
 
 ### Install
 
 ```bash
-npm install -g @geek-fun/serverless-adapter
+npm install @geek-fun/serverless-adapter
 ```
 
 ### Usage
 
+#### Auto-detect Provider (Recommended)
+
+The adapter automatically detects the cloud provider based on the context object:
+
 ```typescript
- const app = express();
-export const handler = serverlessAdapter(app)
+import express from 'express';
+import serverlessAdapter from '@geek-fun/serverless-adapter';
+
+const app = express();
+
+app.get('/', (req, res) => {
+  res.json({ message: 'Hello World!' });
+});
+
+// Auto-detect provider based on context
+export const handler = serverlessAdapter(app);
 ```
+
+#### Explicit Provider Selection
+
+You can explicitly specify the provider:
+
+```typescript
+import express from 'express';
+import serverlessAdapter from '@geek-fun/serverless-adapter';
+
+const app = express();
+
+app.get('/', (req, res) => {
+  res.json({ message: 'Hello from Tencent Cloud!' });
+});
+
+// Explicitly specify Tencent provider
+export const main_handler = serverlessAdapter(app, { provider: 'tencent' });
+```
+
+#### Aliyun Function Compute Example
+
+```typescript
+import express from 'express';
+import serverlessAdapter from '@geek-fun/serverless-adapter';
+
+const app = express();
+
+app.get('/api/users', (req, res) => {
+  res.json({ users: [] });
+});
+
+// Handler for Aliyun Function Compute
+export const handler = serverlessAdapter(app);
+```
+
+#### Tencent SCF Example
+
+```typescript
+import express from 'express';
+import serverlessAdapter from '@geek-fun/serverless-adapter';
+
+const app = express();
+
+app.get('/api/users', (req, res) => {
+  res.json({ users: [] });
+});
+
+// Handler for Tencent SCF
+export const main_handler = serverlessAdapter(app, { provider: 'tencent' });
+```
+
+## API Reference
+
+### `serverlessAdapter(app, options?)`
+
+Creates a serverless handler for your Express or Koa application.
+
+#### Parameters
+
+| Parameter          | Type                    | Required | Description                                                  |
+| ------------------ | ----------------------- | -------- | ------------------------------------------------------------ |
+| `app`              | `Express \| Koa`        | Yes      | Express or Koa application instance                          |
+| `options.provider` | `'aliyun' \| 'tencent'` | No       | Explicitly specify cloud provider (auto-detected if omitted) |
+
+#### Returns
+
+A function that handles serverless events:
+
+```typescript
+(event: Buffer, context: ProviderContext) =>
+  Promise<{
+    statusCode: number;
+    body: string;
+    headers: Record<string, string>;
+    isBase64Encoded: boolean;
+  }>;
+```
+
+## Provider Detection
+
+The adapter automatically detects the cloud provider by examining the `context` object:
+
+| Provider | Detection Fields                                         |
+| -------- | -------------------------------------------------------- |
+| Aliyun   | `accountId`, `credentials`, `service`, `tracing`         |
+| Tencent  | `tencentcloud_region`, `tencentcloud_appid`, `namespace` |
+
+## License
+
+[Apache-2.0](LICENSE)

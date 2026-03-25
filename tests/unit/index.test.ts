@@ -1,6 +1,8 @@
 import express from 'express4';
 import serverlessAdapter from '../../src/index';
 import { defaultContext } from '../fixtures/fcContext';
+import { createTencentContext, createTencentEvent } from '../fixtures/tencentContext';
+import { ProviderContext } from '../../src/types';
 
 describe('serverlessAdapter', () => {
   it('should handle successful request', async () => {
@@ -140,5 +142,64 @@ describe('serverlessAdapter', () => {
 
     expect(result.statusCode).toBe(200);
     expect(result.isBase64Encoded).toBe(true);
+  });
+
+  it('should throw error when provider cannot be detected', async () => {
+    const app = express();
+    app.get('/test', (req, res) => {
+      res.status(200).json({ message: 'success' });
+    });
+
+    const handler = serverlessAdapter(app);
+    const event = {
+      path: '/test',
+      httpMethod: 'GET',
+      headers: {},
+      queryParameters: {},
+      pathParameters: {},
+      body: undefined,
+      isBase64Encoded: false,
+    };
+
+    const unknownContext = { unknown: true } as unknown as ProviderContext;
+
+    await expect(handler(Buffer.from(JSON.stringify(event)), unknownContext)).rejects.toThrow(
+      'Unable to detect cloud provider. Please specify provider option.',
+    );
+  });
+
+  it('should use explicit provider when specified', async () => {
+    const app = express();
+    app.get('/test', (req, res) => {
+      res.status(200).json({ message: 'tencent success' });
+    });
+
+    const handler = serverlessAdapter(app, { provider: 'tencent' });
+    const tencentEvent = createTencentEvent();
+    const tencentContext = createTencentContext();
+
+    const result = await handler(Buffer.from(JSON.stringify(tencentEvent)), tencentContext);
+
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toBe('{"message":"tencent success"}');
+  });
+
+  it('should handle Tencent SCF event correctly', async () => {
+    const app = express();
+    app.get('/test', (req, res) => {
+      res.status(200).json({ message: 'tencent handler' });
+    });
+
+    const handler = serverlessAdapter(app);
+    const tencentEvent = createTencentEvent({
+      path: '/test',
+      httpMethod: 'GET',
+    });
+    const tencentContext = createTencentContext();
+
+    const result = await handler(Buffer.from(JSON.stringify(tencentEvent)), tencentContext);
+
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toBe('{"message":"tencent handler"}');
   });
 });
