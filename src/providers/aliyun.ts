@@ -35,6 +35,15 @@ export class AliyunProvider extends BaseProvider {
 
   detect(_rawEvent: ProviderEvent, rawContext: ProviderContext): boolean {
     const context = rawContext as AliyunApiGatewayContext;
-    return !!(context.accountId || context.credentials || context.service || context.tracing);
+
+    if (context.service?.name || context.tracing || context.logger) {
+      return true;
+    }
+
+    if (context.credentials && context.function?.memory !== undefined) {
+      return true;
+    }
+
+    return false;
   }
 }

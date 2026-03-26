@@ -1,6 +1,7 @@
 import { ServerlessProvider } from './base';
 import { AliyunProvider } from './aliyun';
 import { TencentProvider } from './tencent';
+import { VolcengineProvider } from './volcengine';
 import { CloudProvider, ProviderContext, ProviderEvent } from '../types';
 
 const providers: Map<CloudProvider, ServerlessProvider> = new Map();
@@ -31,7 +32,9 @@ export function getAllProviders(): Map<CloudProvider, ServerlessProvider> {
 
 registerProvider(new AliyunProvider());
 registerProvider(new TencentProvider());
+registerProvider(new VolcengineProvider());
 
 export { ServerlessProvider } from './base';
 export { AliyunProvider } from './aliyun';
 export { TencentProvider } from './tencent';
+export { VolcengineProvider } from './volcengine';
