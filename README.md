@@ -15,6 +15,7 @@ Adapter for web frameworks (Express, Koa) to run on serverless platforms across 
 | ---------------------- | ------------------------------- | ------------ | ------------ |
 | Alibaba Cloud (Aliyun) | Function Compute                | ✅ Supported | API Gateway  |
 | Tencent Cloud          | Serverless Cloud Function (SCF) | ✅ Supported | API Gateway  |
+| Volcengine             | veFaaS (函数服务)               | ✅ Supported | API Gateway  |
 
 ## Supported Frameworks
 
@@ -107,6 +108,22 @@ app.get('/api/users', (req, res) => {
 export const main_handler = serverlessAdapter(app, { provider: 'tencent' });
 ```
 
+#### Volcengine veFaaS Example
+
+```typescript
+import express from 'express';
+import serverlessAdapter from '@geek-fun/serverless-adapter';
+
+const app = express();
+
+app.get('/api/users', (req, res) => {
+  res.json({ users: [] });
+});
+
+// Handler for Volcengine veFaaS
+export const handler = serverlessAdapter(app, { provider: 'volcengine' });
+```
+
 ## API Reference
 
 ### `serverlessAdapter(app, options?)`
@@ -115,10 +132,10 @@ Creates a serverless handler for your Express or Koa application.
 
 #### Parameters
 
-| Parameter          | Type                    | Required | Description                                                  |
-| ------------------ | ----------------------- | -------- | ------------------------------------------------------------ |
-| `app`              | `Express \| Koa`        | Yes      | Express or Koa application instance                          |
-| `options.provider` | `'aliyun' \| 'tencent'` | No       | Explicitly specify cloud provider (auto-detected if omitted) |
+| Parameter          | Type                                    | Required | Description                                                  |
+| ------------------ | --------------------------------------- | -------- | ------------------------------------------------------------ |
+| `app`              | `Express \| Koa`                        | Yes      | Express or Koa application instance                          |
+| `options.provider` | `'aliyun' \| 'tencent' \| 'volcengine'` | No       | Explicitly specify cloud provider (auto-detected if omitted) |
 
 #### Returns
 
@@ -138,10 +155,11 @@ A function that handles serverless events:
 
 The adapter automatically detects the cloud provider by examining the `context` object:
 
-| Provider | Detection Fields                                         |
-| -------- | -------------------------------------------------------- |
-| Aliyun   | `accountId`, `credentials`, `service`, `tracing`         |
-| Tencent  | `tencentcloud_region`, `tencentcloud_appid`, `namespace` |
+| Provider   | Detection Fields                                         |
+| ---------- | -------------------------------------------------------- |
+| Aliyun     | `service.name`, `tracing`, `logger`, `function.memory`   |
+| Tencent    | `tencentcloud_region`, `tencentcloud_appid`, `namespace` |
+| Volcengine | `requestId`, `region`, `function.memoryMb`               |
 
 ## License
 

@@ -170,7 +170,7 @@ describe('serverlessAdapter', () => {
 
   it('should use explicit provider when specified', async () => {
     const app = express();
-    app.get('/test', (req, res) => {
+    app.get('/api/test', (req, res) => {
       res.status(200).json({ message: 'tencent success' });
     });
 
@@ -186,13 +186,12 @@ describe('serverlessAdapter', () => {
 
   it('should handle Tencent SCF event correctly', async () => {
     const app = express();
-    app.get('/test', (req, res) => {
+    app.get('/api/test', (req, res) => {
       res.status(200).json({ message: 'tencent handler' });
     });
 
     const handler = serverlessAdapter(app);
     const tencentEvent = createTencentEvent({
-      path: '/test',
       httpMethod: 'GET',
     });
     const tencentContext = createTencentContext();

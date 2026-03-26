@@ -193,6 +193,13 @@ describe('AliyunProvider', () => {
           accessKeySecret: 'test-secret',
           securityToken: '',
         },
+        function: {
+          name: 'test-function',
+          handler: 'index.handler',
+          memory: 128,
+          timeout: 30,
+          initializer: '',
+        },
       };
 
       expect(provider.detect(rawEvent, context as AliyunApiGatewayContext)).toBe(true);

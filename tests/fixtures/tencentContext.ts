@@ -19,7 +19,7 @@ export const defaultTencentContext: TencentScfContext = {
 export const defaultTencentApiGatewayEvent: TencentApiGatewayEvent = {
   requestContext: {
     serviceId: 'service-test-id',
-    path: '/test',
+    path: '/api/test',
     httpMethod: 'GET',
     requestId: 'req-12345',
     identity: {
@@ -28,7 +28,7 @@ export const defaultTencentApiGatewayEvent: TencentApiGatewayEvent = {
     sourceIp: '192.168.1.1',
     stage: 'release',
   },
-  path: '/test',
+  path: '/api/test',
   httpMethod: 'GET',
   queryString: {},
   body: '',

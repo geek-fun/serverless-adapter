@@ -9,6 +9,13 @@ import {
   TencentEvent,
   TencentHandler,
 } from './tencent';
+import {
+  VolcengineApiGatewayEvent,
+  VolcengineVefaasContext,
+  VolcengineVefaasResponse,
+  VolcengineEvent,
+  VolcengineHandler,
+} from './volcengine';
 
 export { AliyunApiGatewayContext, AliyunEvent, AliyunResponse };
 export {
@@ -17,6 +24,13 @@ export {
   TencentScfResponse,
   TencentEvent,
   TencentHandler,
+};
+export {
+  VolcengineApiGatewayEvent,
+  VolcengineVefaasContext,
+  VolcengineVefaasResponse,
+  VolcengineEvent,
+  VolcengineHandler,
 };
 
 export type Context = AliyunApiGatewayContext;
@@ -48,17 +62,17 @@ export type ServerlessResponse = {
 /**
  * Supported cloud providers
  */
-export type CloudProvider = 'aliyun' | 'tencent';
+export type CloudProvider = 'aliyun' | 'tencent' | 'volcengine';
 
 /**
  * Provider-specific context types
  */
-export type ProviderContext = AliyunApiGatewayContext | TencentScfContext;
+export type ProviderContext = AliyunApiGatewayContext | TencentScfContext | VolcengineVefaasContext;
 
 /**
  * Provider-specific event types
  */
-export type ProviderEvent = AliyunEvent | TencentEvent;
+export type ProviderEvent = AliyunEvent | TencentEvent | VolcengineEvent;
 
 export type ServerlessAdapter = (app: Express | Application) => (
   event: Event,
