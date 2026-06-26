@@ -30,6 +30,9 @@ export class AliyunProvider extends BaseProvider {
       body: response.body,
       headers: response.headers,
       isBase64Encoded: response.isBase64Encoded,
+      multiValueHeaders: (response as Record<string, unknown>).multiValueHeaders as
+        | { [key: string]: string[] }
+        | undefined,
     };
   }
 

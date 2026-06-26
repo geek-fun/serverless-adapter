@@ -33,6 +33,9 @@ export class VolcengineProvider extends BaseProvider {
       statusCode: response.statusCode,
       headers: response.headers,
       body: response.body,
+      multiValueHeaders: (response as Record<string, unknown>).multiValueHeaders as
+        | { [key: string]: string[] }
+        | undefined,
     };
   }
 
