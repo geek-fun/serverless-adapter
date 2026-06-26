@@ -5,7 +5,13 @@ import { constructFramework } from './framework';
 import { waitForStreamComplete, buildResponse } from './transport';
 import { detectProvider, getProvider } from './providers';
 import { debug } from './common';
-import { CloudProvider, ProviderEvent, ProviderContext, ServerlessResponse } from './types';
+import {
+  CloudProvider,
+  HonoApp,
+  ProviderEvent,
+  ProviderContext,
+  ServerlessResponse,
+} from './types';
 
 export interface ServerlessAdapterOptions {
   provider?: CloudProvider;
@@ -16,12 +22,13 @@ type HandlerResult = {
   body: string;
   headers: IncomingHttpHeaders;
   isBase64Encoded: boolean;
+  multiValueHeaders?: { [key: string]: string[] };
 };
 
 type Handler = (event: ProviderEvent, context: ProviderContext) => Promise<HandlerResult>;
 
 const serverlessAdapter = (
-  app: Express | Application,
+  app: Express | Application | HonoApp,
   options?: ServerlessAdapterOptions,
 ): Handler => {
   const serverlessFramework = constructFramework(app);

@@ -52,6 +52,7 @@ export interface VolcengineVefaasResponse {
   statusCode: number;
   headers: IncomingHttpHeaders;
   body: string;
+  multiValueHeaders?: { [key: string]: string[] };
 }
 
 /**

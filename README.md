@@ -7,7 +7,7 @@
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![codecov](https://codecov.io/gh/geek-fun/serverless-adapter/graph/badge.svg?token=lw1AJuX9S9)](https://codecov.io/gh/geek-fun/serverless-adapter)
 
-Adapter for web frameworks (Express, Koa) to run on serverless platforms across multiple cloud providers with automatic provider detection.
+Adapter for web frameworks (Express, Koa, Hono) to run on serverless platforms across multiple cloud providers with automatic provider detection.
 
 ## Supported Cloud Providers
 
@@ -25,6 +25,10 @@ Adapter for web frameworks (Express, Koa) to run on serverless platforms across 
 | Express   | 5.x     | ✅ Supported |
 | Koa       | 2.x     | ✅ Supported |
 | Koa       | 3.x     | ✅ Supported |
+| Hono      | 4.x     | ✅ Supported |
+
+> **Note**: Hono support requires Node.js >= 18 (for Web API Request/Response globals).
+> Express and Koa continue to support Node.js >= 16.
 
 ## Quick Start
 
@@ -124,17 +128,31 @@ app.get('/api/users', (req, res) => {
 export const handler = serverlessAdapter(app, { provider: 'volcengine' });
 ```
 
+#### Hono Example
+
+```typescript
+import { Hono } from 'hono';
+import serverlessAdapter from '@geek-fun/serverless-adapter';
+
+const app = new Hono();
+
+app.get('/', (c) => c.json({ message: 'Hello from Hono!' }));
+
+// Auto-detect provider based on context
+export const handler = serverlessAdapter(app);
+```
+
 ## API Reference
 
 ### `serverlessAdapter(app, options?)`
 
-Creates a serverless handler for your Express or Koa application.
+Creates a serverless handler for your Express, Koa, or Hono application.
 
 #### Parameters
 
 | Parameter          | Type                                    | Required | Description                                                  |
 | ------------------ | --------------------------------------- | -------- | ------------------------------------------------------------ |
-| `app`              | `Express \| Koa`                        | Yes      | Express or Koa application instance                          |
+| `app`              | `Express \| Koa \| Hono`               | Yes      | Express, Koa, or Hono application instance                  |
 | `options.provider` | `'aliyun' \| 'tencent' \| 'volcengine'` | No       | Explicitly specify cloud provider (auto-detected if omitted) |
 
 #### Returns

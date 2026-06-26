@@ -39,6 +39,11 @@ export type Event = Buffer;
 /**
  * Unified Serverless Event format used internally
  */
+/**
+ * Minimal interface for Hono app detection via duck-typing
+ */
+export type HonoApp = { fetch: (request: Request) => Response | Promise<Response> };
+
 export type ServerlessEvent = {
   path: string;
   httpMethod: string;
@@ -57,6 +62,7 @@ export type ServerlessResponse = {
   body: string;
   headers: IncomingHttpHeaders;
   isBase64Encoded: boolean;
+  multiValueHeaders?: { [key: string]: string[] };
 };
 
 /**
@@ -74,7 +80,7 @@ export type ProviderContext = AliyunApiGatewayContext | TencentScfContext | Volc
  */
 export type ProviderEvent = AliyunEvent | TencentEvent | VolcengineEvent;
 
-export type ServerlessAdapter = (app: Express | Application) => (
+export type ServerlessAdapter = (app: Express | Application | HonoApp) => (
   event: Event,
   context: Context,
 ) => Promise<{
@@ -82,4 +88,5 @@ export type ServerlessAdapter = (app: Express | Application) => (
   body: string;
   headers: IncomingHttpHeaders;
   isBase64Encoded: boolean;
+  multiValueHeaders?: { [key: string]: string[] };
 }>;
