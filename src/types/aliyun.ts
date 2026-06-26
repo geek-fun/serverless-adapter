@@ -55,4 +55,5 @@ export interface AliyunResponse {
   body: string;
   headers: IncomingHttpHeaders;
   isBase64Encoded: boolean;
+  multiValueHeaders?: { [key: string]: string[] };
 }

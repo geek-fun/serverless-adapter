@@ -56,6 +56,7 @@ export interface TencentScfResponse {
   statusCode: number;
   headers: IncomingHttpHeaders;
   body: string;
+  multiValueHeaders?: { [key: string]: string[] };
 }
 
 /**
