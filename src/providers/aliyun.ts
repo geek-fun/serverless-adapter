@@ -12,15 +12,22 @@ export class AliyunProvider extends BaseProvider {
   readonly name = 'aliyun' as const;
 
   normalizeEvent(rawEvent: ProviderEvent): ServerlessEvent {
-    const event = JSON.parse(Buffer.from(rawEvent as Buffer).toString());
+    let raw: Record<string, unknown>;
+    if (Buffer.isBuffer(rawEvent)) {
+      raw = JSON.parse(rawEvent.toString());
+    } else if (typeof rawEvent === 'string') {
+      raw = JSON.parse(rawEvent);
+    } else {
+      raw = rawEvent as Record<string, unknown>;
+    }
     return {
-      path: event.path,
-      httpMethod: event.httpMethod,
-      headers: event.headers || {},
-      queryParameters: event.queryParameters || {},
-      pathParameters: event.pathParameters || {},
-      body: event.body,
-      isBase64Encoded: event.isBase64Encoded || false,
+      path: (raw.path as string) || '/',
+      httpMethod: (raw.httpMethod as string) || 'GET',
+      headers: (raw.headers as Record<string, string>) || {},
+      queryParameters: (raw.queryParameters as Record<string, string>) || {},
+      pathParameters: (raw.pathParameters as Record<string, string>) || {},
+      body: raw.body,
+      isBase64Encoded: (raw.isBase64Encoded as boolean) || false,
     };
   }
 
