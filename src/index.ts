@@ -48,7 +48,7 @@ const serverlessAdapter = (
 
     try {
       const normalizedEvent = provider.normalizeEvent(event);
-      const { request, isBase64Encoded } = provider.createRequest(normalizedEvent);
+      const { request } = provider.createRequest(normalizedEvent);
 
       debug(`serverlessAdapter normalizedEvent: ${JSON.stringify(normalizedEvent)}`);
 
@@ -56,10 +56,9 @@ const serverlessAdapter = (
       await waitForStreamComplete(response);
 
       const builtResponse = buildResponse({ request, response });
-      const formattedResponse = provider.formatResponse({
-        ...builtResponse,
-        isBase64Encoded,
-      } as ServerlessResponse) as HandlerResult;
+      const formattedResponse = provider.formatResponse(
+        builtResponse as ServerlessResponse,
+      ) as HandlerResult;
 
       return formattedResponse;
     } catch (err) {

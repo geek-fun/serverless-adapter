@@ -378,20 +378,54 @@ describe('Hono with Aliyun provider', () => {
     expect(response.body).toEqual('Bearer test-token');
   });
 
-  // 20. isBase64Encoded flag propagation
-  it('should propagate isBase64Encoded flag to response', async () => {
-    app.get('/api/test', (c) => c.json({ ok: true }));
+  // 20. isBase64Encoded flag for text responses
+  it('should set isBase64Encoded false for text/plain response', async () => {
+    app.get('/api/test', (c) => c.text('hello'));
 
     const response = await sendRequest(
       app,
-      {
-        ...defaultEvent,
-        isBase64Encoded: false,
-      },
+      { ...defaultEvent, isBase64Encoded: false },
       defaultContext,
     );
 
     expect(response.statusCode).toEqual(200);
     expect(response.isBase64Encoded).toEqual(false);
+  });
+
+  // 21. isBase64Encoded flag for binary image responses
+  it('should set isBase64Encoded true for image/png binary response', async () => {
+    const pngData = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    app.get('/api/test', (c) => {
+      c.header('content-type', 'image/png');
+      return c.body(pngData.buffer);
+    });
+
+    const response = await sendRequest(
+      app,
+      { ...defaultEvent, isBase64Encoded: false },
+      defaultContext,
+    );
+
+    expect(response.statusCode).toEqual(200);
+    expect(response.isBase64Encoded).toBe(true);
+    expect(response.body).toBe(Buffer.from(pngData).toString('base64'));
+  });
+
+  // 22. isBase64Encoded should NOT be set for text/html even with Buffer body
+  it('should set isBase64Encoded false for text/html response', async () => {
+    app.get('/api/test', (c) => {
+      c.header('content-type', 'text/html');
+      return c.body('<html></html>');
+    });
+
+    const response = await sendRequest(
+      app,
+      { ...defaultEvent, isBase64Encoded: false },
+      defaultContext,
+    );
+
+    expect(response.statusCode).toEqual(200);
+    expect(response.isBase64Encoded).toEqual(false);
+    expect(response.body).toBe('<html></html>');
   });
 });
