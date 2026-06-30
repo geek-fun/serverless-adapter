@@ -236,5 +236,150 @@ describe('transport', () => {
 
       expect(result.headers['x-null']).toBe('');
     });
+
+    // ─── Binary response encoding (base64 for image/audio/video/pdf/font) ───
+
+    const pngData = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+    it('should base64-encode image/png response body', () => {
+      const request = createMockRequest();
+      const response = new ServerlessResponse(request);
+      response.setHeader('content-type', 'image/png');
+      response.end(pngData);
+
+      const result = buildResponse({ request, response });
+
+      expect(result.isBase64Encoded).toBe(true);
+      expect(result.body).toBe(pngData.toString('base64'));
+      expect(result.headers['content-type']).toBe('image/png');
+    });
+
+    it('should base64-encode image/jpeg response body', () => {
+      const request = createMockRequest();
+      const response = new ServerlessResponse(request);
+      response.setHeader('content-type', 'image/jpeg');
+      const jpgData = Buffer.from([0xff, 0xd8, 0xff, 0xe0]);
+      response.end(jpgData);
+
+      const result = buildResponse({ request, response });
+
+      expect(result.isBase64Encoded).toBe(true);
+      expect(result.body).toBe(jpgData.toString('base64'));
+    });
+
+    it('should base64-encode audio/mpeg response body', () => {
+      const request = createMockRequest();
+      const response = new ServerlessResponse(request);
+      response.setHeader('content-type', 'audio/mpeg');
+      response.end(Buffer.from([0xff, 0xfb, 0x90, 0x00]));
+
+      const result = buildResponse({ request, response });
+
+      expect(result.isBase64Encoded).toBe(true);
+    });
+
+    it('should base64-encode video/mp4 response body', () => {
+      const request = createMockRequest();
+      const response = new ServerlessResponse(request);
+      response.setHeader('content-type', 'video/mp4');
+      response.end(Buffer.from([0x00, 0x00, 0x00, 0x18]));
+
+      const result = buildResponse({ request, response });
+
+      expect(result.isBase64Encoded).toBe(true);
+    });
+
+    it('should base64-encode application/pdf response body', () => {
+      const request = createMockRequest();
+      const response = new ServerlessResponse(request);
+      response.setHeader('content-type', 'application/pdf');
+      response.end(Buffer.from([0x25, 0x50, 0x44, 0x46])); // %PDF
+
+      const result = buildResponse({ request, response });
+
+      expect(result.isBase64Encoded).toBe(true);
+    });
+
+    it('should base64-encode font/woff2 response body', () => {
+      const request = createMockRequest();
+      const response = new ServerlessResponse(request);
+      response.setHeader('content-type', 'font/woff2');
+      response.end(Buffer.from([0x77, 0x4f, 0x46, 0x32])); // wOF2
+
+      const result = buildResponse({ request, response });
+
+      expect(result.isBase64Encoded).toBe(true);
+    });
+
+    it('should NOT base64-encode text/plain response body', () => {
+      const request = createMockRequest();
+      const response = new ServerlessResponse(request);
+      response.setHeader('content-type', 'text/plain');
+      response.end('plain text');
+
+      const result = buildResponse({ request, response });
+
+      expect(result.isBase64Encoded).toBe(false);
+      expect(result.body).toBe('plain text');
+    });
+
+    it('should NOT base64-encode application/json response body', () => {
+      const request = createMockRequest();
+      const response = new ServerlessResponse(request);
+      response.setHeader('content-type', 'application/json');
+      response.end('{"key":"value"}');
+
+      const result = buildResponse({ request, response });
+
+      expect(result.isBase64Encoded).toBe(false);
+      expect(result.body).toBe('{"key":"value"}');
+    });
+
+    it('should NOT base64-encode text/html response body', () => {
+      const request = createMockRequest();
+      const response = new ServerlessResponse(request);
+      response.setHeader('content-type', 'text/html');
+      response.end('<html></html>');
+
+      const result = buildResponse({ request, response });
+
+      expect(result.isBase64Encoded).toBe(false);
+      expect(result.body).toBe('<html></html>');
+    });
+
+    it('should NOT base64-encode application/octet-stream (too generic)', () => {
+      const request = createMockRequest();
+      const response = new ServerlessResponse(request);
+      response.setHeader('content-type', 'application/octet-stream');
+      response.end('buffer response');
+
+      const result = buildResponse({ request, response });
+
+      expect(result.isBase64Encoded).toBe(false);
+      expect(result.body).toBe('buffer response');
+    });
+
+    it('should NOT base64-encode response without content-type header', () => {
+      const request = createMockRequest();
+      const response = new ServerlessResponse(request);
+      response.end('no content type');
+
+      const result = buildResponse({ request, response });
+
+      expect(result.isBase64Encoded).toBe(false);
+      expect(result.body).toBe('no content type');
+    });
+
+    it('should preserve binary data round-trip: base64 encode then decode matches original', () => {
+      const request = createMockRequest();
+      const response = new ServerlessResponse(request);
+      response.setHeader('content-type', 'image/png');
+      response.end(pngData);
+
+      const result = buildResponse({ request, response });
+      const decoded = Buffer.from(result.body, 'base64');
+
+      expect(decoded.equals(pngData)).toBe(true);
+    });
   });
 });

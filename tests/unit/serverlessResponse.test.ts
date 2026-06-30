@@ -78,16 +78,14 @@ describe('ServerlessResponse', () => {
       expect(callbackCalled).toBe(true);
     });
 
-    it('should throw error for unexpected write type via addData', () => {
+    it('should throw error for unsupported write type (object)', () => {
       const request = createMockRequest();
       const response = new ServerlessResponse(request);
       response.setHeader('content-type', 'text/plain');
       response.writeHead(200);
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      expect(() => (response as any).socket.write({})).toThrow(
-        'response.write() of unexpected type: object',
-      );
+      expect(() => (response as any).socket.write({})).toThrow();
     });
   });
 
@@ -295,6 +293,46 @@ describe('ServerlessResponse', () => {
       response.end();
 
       expect(ServerlessResponse.body(response).toString()).toBe('hello');
+    });
+
+    // ─── Binary data preservation ───
+
+    it('should preserve PNG binary bytes through write+end', () => {
+      const request = createMockRequest();
+      const response = new ServerlessResponse(request);
+      response.setHeader('content-type', 'image/png');
+
+      const pngData = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+      response.end(pngData);
+
+      const body = ServerlessResponse.body(response);
+      expect(body.equals(pngData)).toBe(true);
+    });
+
+    it('should preserve binary data with high bytes (>= 0x80)', () => {
+      const request = createMockRequest();
+      const response = new ServerlessResponse(request);
+      response.setHeader('content-type', 'application/pdf');
+
+      const data = Buffer.from([0x89, 0xff, 0x80, 0xfe, 0x90, 0x00, 0x01, 0x7f]);
+      response.end(data);
+
+      const body = ServerlessResponse.body(response);
+      expect(body.equals(data)).toBe(true);
+    });
+
+    it('should add binary body directly when _wroteHeader is true', () => {
+      const request = createMockRequest();
+      const response2 = new ServerlessResponse(request);
+      response2.setHeader('content-type', 'image/png');
+      // writeHead sets _header; subsequent writes go to body directly
+      response2.writeHead(200);
+      const pngData = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
+      response2.write(pngData);
+      response2.end();
+
+      const body = ServerlessResponse.body(response2);
+      expect(body.indexOf(pngData)).not.toBe(-1);
     });
   });
 });

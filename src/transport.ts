@@ -76,7 +76,6 @@ export const buildResponse = ({
     (contentType.startsWith('image/') ||
       contentType.startsWith('audio/') ||
       contentType.startsWith('video/') ||
-      contentType === 'application/octet-stream' ||
       contentType === 'application/pdf' ||
       contentType.includes('font/')),
   );
