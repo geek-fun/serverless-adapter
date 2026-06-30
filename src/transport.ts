@@ -70,12 +70,25 @@ export const buildResponse = ({
 }) => {
   const { headers, multiValueHeaders } = sanitizeHeaders(ServerlessResponse.headers(response));
 
-  let body = ServerlessResponse.body(response).toString(
-    request.isBase64Encoded ? 'base64' : 'utf8',
+  const contentType = String(headers['content-type'] || '');
+  const isBinaryResponse = Boolean(
+    contentType &&
+    (contentType.startsWith('image/') ||
+      contentType.startsWith('audio/') ||
+      contentType.startsWith('video/') ||
+      contentType === 'application/octet-stream' ||
+      contentType === 'application/pdf' ||
+      contentType.includes('font/')),
   );
-  if (headers['transfer-encoding'] === 'chunked' || response.chunkedEncoding) {
-    const raw = ServerlessResponse.body(response).toString().split('\r\n');
-    const parsed = [];
+
+  const bodyBuffer = ServerlessResponse.body(response);
+  let body: string;
+
+  if (isBinaryResponse) {
+    body = bodyBuffer.toString('base64');
+  } else if (headers['transfer-encoding'] === 'chunked' || response.chunkedEncoding) {
+    const raw = bodyBuffer.toString().split('\r\n');
+    const parsed: string[] = [];
     for (let i = 0; i < raw.length; i += 2) {
       const size = parseInt(raw[i], 16);
       const value = raw[i + 1];
@@ -84,12 +97,15 @@ export const buildResponse = ({
       }
     }
     body = parsed.join('');
+  } else {
+    body = bodyBuffer.toString(request.isBase64Encoded ? 'base64' : 'utf8');
   }
+
   return {
     statusCode: response.statusCode,
     body,
     headers,
     multiValueHeaders,
-    isBase64Encoded: request.isBase64Encoded,
+    isBase64Encoded: isBinaryResponse || request.isBase64Encoded,
   };
 };

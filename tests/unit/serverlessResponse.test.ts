@@ -247,7 +247,7 @@ describe('ServerlessResponse', () => {
     });
   });
 
-  describe('getString helper (via write)', () => {
+  describe('write method', () => {
     it('should handle Buffer data', () => {
       const request = createMockRequest();
       const response = new ServerlessResponse(request);
@@ -278,17 +278,15 @@ describe('ServerlessResponse', () => {
       expect(ServerlessResponse.body(response).toString()).toBe('uint8 content');
     });
 
-    it('should throw error for unexpected type in getString', () => {
+    it('should throw error for unsupported write type (number)', () => {
       const request = createMockRequest();
       const response = new ServerlessResponse(request);
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      expect(() => (response as any).socket.write(123)).toThrow(
-        'response.write() of unexpected type: number',
-      );
+      expect(() => (response as any).socket.write(123)).toThrow();
     });
 
-    it('should handle Uint8Array in getString', () => {
+    it('should handle raw Uint8Array of ASCII bytes', () => {
       const request = createMockRequest();
       const response = new ServerlessResponse(request);
 

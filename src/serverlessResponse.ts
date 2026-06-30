@@ -3,22 +3,8 @@ import { Socket } from 'node:net';
 import { debug } from './common';
 import ServerlessRequest from './serverlessRequest';
 
-const headerEnd = '\r\n\r\n';
-
 const BODY = Symbol('Response body');
 const HEADERS = Symbol('Response headers');
-
-const getString = (data: unknown): string => {
-  if (Buffer.isBuffer(data)) {
-    return data.toString('utf8');
-  } else if (typeof data === 'string') {
-    return data;
-  } else if (data instanceof Uint8Array) {
-    return new TextDecoder().decode(data);
-  } else {
-    throw new Error(`response.write() of unexpected type: ${typeof data}`);
-  }
-};
 
 const addData = (stream: ServerlessResponse, data: Buffer | string | Uint8Array): void => {
   try {
@@ -116,16 +102,24 @@ export default class ServerlessResponse extends ServerResponse {
         if (this._header === '' || this._wroteHeader) {
           addData(this, data);
         } else {
-          const string = getString(data);
-          const index = string.indexOf(headerEnd);
+          // Detect HTTP header boundary in raw bytes to preserve binary body data.
+          // Using Buffer.indexOf avoids corrupting bytes >= 0x80 (which would
+          // become U+FFFD if converted to string via getString()).
+          const buf = Buffer.isBuffer(data) ? data : Buffer.from(data);
+          const headerEndBuf = Buffer.from('\r\n\r\n');
+          const index = buf.indexOf(headerEndBuf);
 
           if (index !== -1) {
-            const remainder = string.slice(index + headerEnd.length);
-
-            if (remainder) {
+            // Combined header + body (text response case)
+            const remainder = buf.subarray(index + headerEndBuf.length);
+            if (remainder.length > 0) {
               addData(this, remainder);
             }
-
+            this._wroteHeader = true;
+          } else {
+            // Body data only — header already written separately
+            // (or binary body in Node.js 20+ where header is in outputData)
+            addData(this, data);
             this._wroteHeader = true;
           }
         }
