@@ -5,10 +5,12 @@ import {
   AliyunProvider,
   TencentProvider,
   VolcengineProvider,
+  AWSProvider,
 } from '../../../src/providers';
 import { defaultContext } from '../../fixtures/fcContext';
 import { createTencentContext, createTencentEvent } from '../../fixtures/tencentContext';
 import { createVolcengineContext, createVolcengineEvent } from '../../fixtures/volcengineContext';
+import { createAwsV1Event, createAwsContext } from '../../fixtures/awsContext';
 import { AliyunApiGatewayContext } from '../../../src/types/aliyun';
 import { VolcengineVefaasContext } from '../../../src/types/volcengine';
 
@@ -29,8 +31,13 @@ describe('providers/index', () => {
       expect(provider).toBeInstanceOf(VolcengineProvider);
     });
 
+    it('should return AWSProvider for "aws"', () => {
+      const provider = getProvider('aws');
+      expect(provider).toBeInstanceOf(AWSProvider);
+    });
+
     it('should return undefined for unknown provider', () => {
-      const provider = getProvider('unknown' as 'aliyun' | 'tencent' | 'volcengine');
+      const provider = getProvider('unknown' as 'aliyun' | 'tencent' | 'volcengine' | 'aws');
       expect(provider).toBeUndefined();
     });
   });
@@ -56,6 +63,13 @@ describe('providers/index', () => {
       expect(provider?.name).toBe('volcengine');
     });
 
+    it('should detect AWS provider', () => {
+      const rawEvent = Buffer.from(JSON.stringify(createAwsV1Event()));
+      const context = createAwsContext();
+      const provider = detectProvider(rawEvent, context);
+      expect(provider?.name).toBe('aws');
+    });
+
     it('should return undefined when no provider matches', () => {
       const rawEvent = Buffer.from(JSON.stringify({}));
       const context = { unknown: true };
@@ -67,10 +81,11 @@ describe('providers/index', () => {
   describe('getAllProviders', () => {
     it('should return map of all providers', () => {
       const providers = getAllProviders();
-      expect(providers.size).toBe(3);
+      expect(providers.size).toBe(4);
       expect(providers.has('aliyun')).toBe(true);
       expect(providers.has('tencent')).toBe(true);
       expect(providers.has('volcengine')).toBe(true);
+      expect(providers.has('aws')).toBe(true);
     });
   });
 });
