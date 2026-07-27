@@ -16,6 +16,14 @@ import {
   VolcengineEvent,
   VolcengineHandler,
 } from './volcengine';
+import {
+  AwsApiGatewayV1Event,
+  AwsApiGatewayV2Event,
+  AwsLambdaContext,
+  AwsResponse,
+  AwsEvent,
+  AwsHandler,
+} from './aws';
 
 export { AliyunApiGatewayContext, AliyunEvent, AliyunResponse };
 export {
@@ -31,6 +39,14 @@ export {
   VolcengineVefaasResponse,
   VolcengineEvent,
   VolcengineHandler,
+};
+export {
+  AwsApiGatewayV1Event,
+  AwsApiGatewayV2Event,
+  AwsLambdaContext,
+  AwsResponse,
+  AwsEvent,
+  AwsHandler,
 };
 
 export type Context = AliyunApiGatewayContext;
@@ -68,17 +84,21 @@ export type ServerlessResponse = {
 /**
  * Supported cloud providers
  */
-export type CloudProvider = 'aliyun' | 'tencent' | 'volcengine';
+export type CloudProvider = 'aliyun' | 'tencent' | 'volcengine' | 'aws';
 
 /**
  * Provider-specific context types
  */
-export type ProviderContext = AliyunApiGatewayContext | TencentScfContext | VolcengineVefaasContext;
+export type ProviderContext =
+  | AliyunApiGatewayContext
+  | TencentScfContext
+  | VolcengineVefaasContext
+  | AwsLambdaContext;
 
 /**
  * Provider-specific event types
  */
-export type ProviderEvent = AliyunEvent | TencentEvent | VolcengineEvent;
+export type ProviderEvent = AliyunEvent | TencentEvent | VolcengineEvent | AwsEvent;
 
 export type ServerlessAdapter = (app: Express | Application | HonoApp) => (
   event: Event,
