@@ -16,6 +16,7 @@ Adapter for web frameworks (Express, Koa, Hono) to run on serverless platforms a
 | Alibaba Cloud (Aliyun) | Function Compute                | ✅ Supported | API Gateway  |
 | Tencent Cloud          | Serverless Cloud Function (SCF) | ✅ Supported | API Gateway  |
 | Volcengine             | veFaaS (函数服务)               | ✅ Supported | API Gateway  |
+| AWS                    | Lambda + API Gateway            | ✅ Supported | API Gateway (REST API v1 & HTTP API v2) |
 
 ## Supported Frameworks
 
@@ -153,7 +154,7 @@ Creates a serverless handler for your Express, Koa, or Hono application.
 | Parameter          | Type                                    | Required | Description                                                  |
 | ------------------ | --------------------------------------- | -------- | ------------------------------------------------------------ |
 | `app`              | `Express \| Koa \| Hono`               | Yes      | Express, Koa, or Hono application instance                  |
-| `options.provider` | `'aliyun' \| 'tencent' \| 'volcengine'` | No       | Explicitly specify cloud provider (auto-detected if omitted) |
+| `options.provider` | `'aliyun' \| 'tencent' \| 'volcengine' \| 'aws'` | No       | Explicitly specify cloud provider (auto-detected if omitted) |
 
 #### Returns
 
@@ -178,6 +179,7 @@ The adapter automatically detects the cloud provider by examining the `context` 
 | Aliyun     | `service.name`, `tracing`, `logger`, `function.memory`   |
 | Tencent    | `tencentcloud_region`, `tencentcloud_appid`, `namespace` |
 | Volcengine | `requestId`, `region`, `function.memoryMb`               |
+| AWS        | `awsRequestId`, `invokedFunctionArn`, `functionName`     |
 
 ## License
 
