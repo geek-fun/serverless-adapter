@@ -1,7 +1,11 @@
 import { TencentProvider } from '../../../src/providers/tencent';
 import { TencentApiGatewayEvent } from '../../../src/types/tencent';
 import { TencentScfContext } from '../../../src/types/tencent';
-import { createTencentEvent, createTencentContext } from '../../fixtures/tencentContext';
+import {
+  createTencentEvent,
+  createTencentContext,
+  createTencentFunctionUrlEvent,
+} from '../../fixtures/tencentContext';
 
 describe('TencentProvider', () => {
   let provider: TencentProvider;
@@ -93,6 +97,120 @@ describe('TencentProvider', () => {
       const result = provider.normalizeEvent(rawEvent);
 
       expect(result.pathParameters).toEqual({});
+    });
+  });
+
+  describe('Function URL event', () => {
+    it('should map queryString to queryParameters for Function URL event', () => {
+      const rawEvent = Buffer.from(
+        JSON.stringify(
+          createTencentFunctionUrlEvent({
+            httpMethod: 'POST',
+            path: '/api/users',
+            body: '{"name":"test"}',
+            headers: { 'content-type': 'application/json' },
+            queryString: { a: '1', b: 'hello world' },
+          }),
+        ),
+      );
+
+      const result = provider.normalizeEvent(rawEvent);
+
+      expect(result.path).toBe('/api/users');
+      expect(result.httpMethod).toBe('POST');
+      expect(result.body).toBe('{"name":"test"}');
+      expect(result.headers).toEqual({ 'content-type': 'application/json' });
+      expect(result.queryParameters).toEqual({ a: '1', b: 'hello world' });
+      expect(result.pathParameters).toEqual({});
+      expect(result.isBase64Encoded).toBe(false);
+    });
+
+    it('should treat null-injected legacy fields as Function URL event', () => {
+      const rawEvent = Buffer.from(
+        JSON.stringify({
+          body: '{"a":1}',
+          headers: { 'content-type': 'application/json' },
+          httpMethod: 'POST',
+          path: '/',
+          queryString: { a: '1' },
+          queryStringParameters: null,
+          requestContext: null,
+        }),
+      );
+
+      const result = provider.normalizeEvent(rawEvent);
+
+      expect(result.queryParameters).toEqual({ a: '1' });
+    });
+
+    it('should handle null headers and null body for Function URL event', () => {
+      const rawEvent = Buffer.from(
+        JSON.stringify(createTencentFunctionUrlEvent({ headers: null, body: null })),
+      );
+
+      const result = provider.normalizeEvent(rawEvent);
+
+      expect(result.headers).toEqual({});
+      expect(result.body).toBeNull();
+    });
+
+    it('should default queryParameters to {} when queryString absent for Function URL', () => {
+      const rawEvent = Buffer.from(
+        JSON.stringify(createTencentFunctionUrlEvent({ queryString: undefined })),
+      );
+
+      const result = provider.normalizeEvent(rawEvent);
+
+      expect(result.queryParameters).toEqual({});
+    });
+
+    it('should default path to / when missing for Function URL event', () => {
+      const rawEvent = Buffer.from(
+        JSON.stringify(createTencentFunctionUrlEvent({ path: undefined })),
+      );
+
+      const result = provider.normalizeEvent(rawEvent);
+
+      expect(result.path).toBe('/');
+    });
+
+    it('should strip isBase64Encoded and multiValueHeaders for Function URL', () => {
+      provider.normalizeEvent(Buffer.from(JSON.stringify(createTencentFunctionUrlEvent())));
+
+      const result = provider.formatResponse({
+        statusCode: 201,
+        body: '{"message":"Hello"}',
+        headers: { 'Content-Type': 'application/json' },
+        isBase64Encoded: false,
+        multiValueHeaders: { 'set-cookie': ['a=1'] },
+      });
+
+      expect(result.statusCode).toBe(201);
+      expect(result.body).toBe('{"message":"Hello"}');
+      expect(result.headers).toEqual({ 'Content-Type': 'application/json' });
+      expect(result).not.toHaveProperty('isBase64Encoded');
+      expect(result).not.toHaveProperty('multiValueHeaders');
+    });
+
+    it('should strip isBase64Encoded even for binary response in Function URL', () => {
+      provider.normalizeEvent(Buffer.from(JSON.stringify(createTencentFunctionUrlEvent())));
+
+      const result = provider.formatResponse({
+        statusCode: 200,
+        body: 'aGVsbG8=',
+        headers: { 'content-type': 'image/png' },
+        isBase64Encoded: true,
+        multiValueHeaders: {},
+      });
+
+      expect(result.isBase64Encoded).toBeUndefined();
+      expect(result.multiValueHeaders).toBeUndefined();
+    });
+
+    it('should detect Tencent context for Function URL event', () => {
+      const rawEvent = Buffer.from(JSON.stringify(createTencentFunctionUrlEvent()));
+
+      expect(provider.detect(rawEvent, createTencentContext())).toBe(true);
     });
   });
 
