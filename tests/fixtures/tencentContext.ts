@@ -1,4 +1,8 @@
-import { TencentScfContext, TencentApiGatewayEvent } from '../../src/types/tencent';
+import {
+  TencentScfContext,
+  TencentApiGatewayEvent,
+  TencentFunctionUrlEvent,
+} from '../../src/types/tencent';
 
 export const defaultTencentContext: TencentScfContext = {
   callbackWaitsForEmptyEventLoop: true,
@@ -40,6 +44,23 @@ export const defaultTencentApiGatewayEvent: TencentApiGatewayEvent = {
   headerParameters: {},
   stageVariables: {},
 };
+
+export const defaultTencentFunctionUrlEvent: TencentFunctionUrlEvent = {
+  httpMethod: 'GET',
+  path: '/api/test',
+  body: '',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  queryString: {},
+};
+
+export const createTencentFunctionUrlEvent = (
+  overrides: Partial<TencentFunctionUrlEvent> = {},
+): TencentFunctionUrlEvent => ({
+  ...defaultTencentFunctionUrlEvent,
+  ...overrides,
+});
 
 export const createTencentEvent = (
   overrides: Partial<TencentApiGatewayEvent> = {},

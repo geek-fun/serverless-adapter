@@ -4,6 +4,7 @@ import Application from 'koa';
 import { AliyunApiGatewayContext, AliyunEvent, AliyunResponse } from './aliyun';
 import {
   TencentApiGatewayEvent,
+  TencentFunctionUrlEvent,
   TencentScfContext,
   TencentScfResponse,
   TencentEvent,
@@ -28,6 +29,7 @@ import {
 export { AliyunApiGatewayContext, AliyunEvent, AliyunResponse };
 export {
   TencentApiGatewayEvent,
+  TencentFunctionUrlEvent,
   TencentScfContext,
   TencentScfResponse,
   TencentEvent,
