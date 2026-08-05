@@ -14,11 +14,11 @@ Adapter for web frameworks (Express, Koa, Hono) to run on serverless platforms a
 | Provider               | Service                         | Status       | Trigger Type |
 | ---------------------- | ------------------------------- | ------------ | ------------ |
 | Alibaba Cloud (Aliyun) | Function Compute                | ✅ Supported | API Gateway  |
-| Tencent Cloud          | Serverless Cloud Function (SCF) | ✅ Supported | API Gateway + Function URL  |
+| Tencent Cloud          | Serverless Cloud Function (SCF) | ✅ Supported | Function URL  |
 | Volcengine             | veFaaS (函数服务)               | ✅ Supported | API Gateway  |
 | AWS                    | Lambda + API Gateway            | ✅ Supported | API Gateway (REST API v1 & HTTP API v2) |
 
-> **Note**: Tencent SCF supports both the legacy API Gateway trigger and the Function URL (函数 URL) event-function format. Web 函数 (Web functions, raw HTTP on port 9000) mode needs no adapter and is out of scope.
+> **Note**: Tencent retired the SCF API Gateway trigger (service ended 2025-06-30); this adapter supports the Function URL (函数 URL) event-function format. Web 函数 (Web functions, raw HTTP on port 9000) mode needs no adapter and is out of scope.
 
 ## Supported Frameworks
 
