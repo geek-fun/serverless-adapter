@@ -28,6 +28,20 @@ export interface TencentApiGatewayEvent {
 }
 
 /**
+ * Tencent Cloud SCF Function URL (函数 URL) Event for Event Functions
+ * Compatible with the API Gateway protocol minus requestContext, pathParameters,
+ * queryStringParameters, headerParameters, isBase64Encoded. Query params arrive in `queryString`.
+ * @see https://intl.cloud.tencent.com/document/product/583/69491
+ */
+export interface TencentFunctionUrlEvent {
+  body?: string | null;
+  headers?: Record<string, string> | null;
+  httpMethod: string;
+  path?: string | null;
+  queryString?: Record<string, string> | null;
+}
+
+/**
  * Tencent Cloud SCF Context Object
  * @see https://www.tencentcloud.com/document/product/583/11060
  */
@@ -52,7 +66,7 @@ export interface TencentScfContext {
  * @see https://www.tencentcloud.com/document/product/583/12513
  */
 export interface TencentScfResponse {
-  isBase64Encoded: boolean;
+  isBase64Encoded?: boolean;
   statusCode: number;
   headers: IncomingHttpHeaders;
   body: string;
