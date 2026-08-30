@@ -18,48 +18,79 @@ const addData = (stream: ServerlessResponse, data: Buffer | string | Uint8Array)
 const isWorkerd = (): boolean =>
   typeof navigator !== 'undefined' && navigator.userAgent === 'Cloudflare-Workers';
 
+export const isWorkerdRuntime = isWorkerd;
+
 /**
  * workerd ships a functional ServerResponse (OutgoingMessage → Writable) but stubs
  * assignSocket, which the Node implementation uses to capture the body. The patch
  * must target ServerResponse.prototype — Express swaps res.__proto__ at request
  * time, so subclass-level overrides would be unreachable inside the framework.
+ * Idempotent per process, and restorable so test suites sharing the process
+ * (jest --runInBand) are not polluted.
  */
-const patchWorkerdResponseCapture = (): void => {
-  const proto = ServerResponse.prototype as unknown as Record<PropertyKey, unknown>;
-  const originalWrite = proto.write as (this: unknown, ...args: unknown[]) => boolean;
-  const originalEnd = proto.end as (this: unknown, ...args: unknown[]) => unknown;
+export interface WorkerdResponsePatch {
+  apply: () => void;
+  restore: () => void;
+}
 
-  const collect = (res: unknown, chunk: unknown): void => {
-    const body = (res as Record<PropertyKey, unknown>)[BODY] as Buffer[] | undefined;
-    if (!body) {
-      return;
-    }
-    // workerd's Buffer is a view over a pooled store consumed by OutgoingMessage;
-    // snapshot immediately or the captured body is recycled before buildResponse runs
-    const isBuf = Buffer.isBuffer(chunk);
-    const buf = isBuf ? Buffer.from(chunk as Buffer) : Buffer.from(String(chunk));
-    body.push(buf);
-  };
+let responsePatchApplied = false;
 
-  proto.write = function (this: Record<PropertyKey, unknown>, ...args: unknown[]): boolean {
-    collect(this, args[0]);
-    return originalWrite.apply(this, args);
-  };
+export const createWorkerdResponsePatch = (): WorkerdResponsePatch => {
+  return {
+    apply: (): void => {
+      if (responsePatchApplied) {
+        return;
+      }
+      responsePatchApplied = true;
 
-  proto.end = function (this: Record<PropertyKey, unknown>, ...args: unknown[]): unknown {
-    if (args[0]) {
-      collect(this, args[0]);
-    }
-    const result = originalEnd.apply(this, args);
-    if ((this as Record<PropertyKey, unknown>)[BODY]) {
-      (this as unknown as { emit: (event: string) => void }).emit('finish');
-    }
-    return result;
+      const proto = ServerResponse.prototype as unknown as Record<PropertyKey, unknown>;
+      const originalWrite = proto.write as (this: unknown, ...args: unknown[]) => boolean;
+      const originalEnd = proto.end as (this: unknown, ...args: unknown[]) => unknown;
+
+      const collect = (res: unknown, chunk: unknown): void => {
+        const body = (res as Record<PropertyKey, unknown>)[BODY] as Buffer[] | undefined;
+        if (!body) {
+          return;
+        }
+        // workerd's Buffer is a view over a pooled store consumed by OutgoingMessage;
+        // snapshot immediately or the captured body is recycled before buildResponse runs
+        const isBuf = Buffer.isBuffer(chunk);
+        const buf = isBuf ? Buffer.from(chunk as Buffer) : Buffer.from(String(chunk));
+        body.push(buf);
+      };
+
+      proto.write = function (this: Record<PropertyKey, unknown>, ...args: unknown[]): boolean {
+        collect(this, args[0]);
+        return originalWrite.apply(this, args);
+      };
+
+      proto.end = function (this: Record<PropertyKey, unknown>, ...args: unknown[]): unknown {
+        if (args[0]) {
+          collect(this, args[0]);
+        }
+        const result = originalEnd.apply(this, args);
+        if ((this as Record<PropertyKey, unknown>)[BODY]) {
+          (this as unknown as { emit: (event: string) => void }).emit('finish');
+        }
+        return result;
+      };
+    },
+    restore: (): void => {
+      if (!responsePatchApplied) {
+        return;
+      }
+      const proto = ServerResponse.prototype as unknown as Record<PropertyKey, unknown>;
+      delete proto.write;
+      delete proto.end;
+      responsePatchApplied = false;
+    },
   };
 };
 
+const workerdResponsePatch = createWorkerdResponsePatch();
+
 if (isWorkerd()) {
-  patchWorkerdResponseCapture();
+  workerdResponsePatch.apply();
 }
 
 export default class ServerlessResponse extends ServerResponse {
@@ -95,7 +126,11 @@ export default class ServerlessResponse extends ServerResponse {
   }
 
   setHeader(name: string, value: string | number | readonly string[]) {
-    if (this._wroteHeader) {
+    // workerd's OutgoingMessage.setHeader throws once headersSent, so late headers
+    // (e.g. set after writeHead) must land in the adapter-side [HEADERS] store
+    const sent = isWorkerdRuntime() ? this.headersSent : this._wroteHeader;
+
+    if (sent) {
       this[HEADERS][name] = value as string;
     } else {
       super.setHeader(name, value);
@@ -125,16 +160,20 @@ export default class ServerlessResponse extends ServerResponse {
   constructor(request: ServerlessRequest) {
     super(request);
 
-    this[BODY] = [];
     this[HEADERS] = {};
     this._header = '';
     this.useChunkedEncodingByDefault = false;
     this.chunkedEncoding = false;
 
     if (isWorkerd()) {
-      // assignSocket is a stub on workerd; the patched prototype captures output instead
+      // assignSocket is a stub on workerd; the patched prototype captures output instead.
+      // [BODY] existing as an own property is also the patch's capture marker — Node-path
+      // instances must NOT have it, or the patch would double-collect on top of addData.
+      this[BODY] = [];
       return;
     }
+
+    this[BODY] = [];
 
     this.assignSocket({
       _writableState: {},
