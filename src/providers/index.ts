@@ -3,6 +3,7 @@ import { AliyunProvider } from './aliyun';
 import { TencentProvider } from './tencent';
 import { VolcengineProvider } from './volcengine';
 import { AWSProvider } from './aws';
+import { CloudflareProvider } from './cloudflare';
 import { CloudProvider, ProviderContext, ProviderEvent } from '../types';
 
 const providers: Map<CloudProvider, ServerlessProvider> = new Map();
@@ -35,9 +36,11 @@ registerProvider(new AliyunProvider());
 registerProvider(new TencentProvider());
 registerProvider(new VolcengineProvider());
 registerProvider(new AWSProvider());
+registerProvider(new CloudflareProvider());
 
 export { ServerlessProvider } from './base';
 export { AliyunProvider } from './aliyun';
 export { TencentProvider } from './tencent';
 export { VolcengineProvider } from './volcengine';
 export { AWSProvider } from './aws';
+export { CloudflareProvider } from './cloudflare';
