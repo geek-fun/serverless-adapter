@@ -21,7 +21,7 @@ export class AWSProvider extends BaseProvider {
     } else if (typeof rawEvent === 'string') {
       raw = JSON.parse(rawEvent);
     } else {
-      raw = rawEvent as Record<string, unknown>;
+      raw = rawEvent as unknown as Record<string, unknown>;
     }
 
     if (isV2Event(raw)) {
