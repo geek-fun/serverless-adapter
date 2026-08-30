@@ -47,7 +47,7 @@ const serverlessAdapter = (
     debug(`serverlessAdapter: Using provider: ${provider.name}`);
 
     try {
-      const normalizedEvent = provider.normalizeEvent(event);
+      const normalizedEvent = await provider.normalizeEvent(event);
       const { request } = provider.createRequest(normalizedEvent);
 
       debug(`serverlessAdapter normalizedEvent: ${JSON.stringify(normalizedEvent)}`);
