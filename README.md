@@ -17,6 +17,7 @@ Adapter for web frameworks (Express, Koa, Hono) to run on serverless platforms a
 | Tencent Cloud          | Serverless Cloud Function (SCF) | ✅ Supported | Function URL  |
 | Volcengine             | veFaaS (函数服务)               | ✅ Supported | API Gateway  |
 | AWS                    | Lambda + API Gateway            | ✅ Supported | API Gateway (REST API v1 & HTTP API v2) |
+| Cloudflare             | Workers                         | ✅ Supported | fetch (Request → Response) |
 
 > **Note**: Tencent retired the SCF API Gateway trigger (service ended 2025-06-30); this adapter supports the Function URL (函数 URL) event-function format. Web 函数 (Web functions, raw HTTP on port 9000) mode needs no adapter and is out of scope.
 
@@ -131,6 +132,35 @@ app.get('/api/users', (req, res) => {
 export const handler = serverlessAdapter(app, { provider: 'volcengine' });
 ```
 
+#### Cloudflare Workers Example
+
+```typescript
+import express from 'express';
+import serverlessAdapter from '@geek-fun/serverless-adapter';
+
+const app = express();
+
+app.get('/api/users', (req, res) => {
+  res.json({ users: [] });
+});
+
+const handler = serverlessAdapter(app, { provider: 'cloudflare' });
+
+export default {
+  async fetch(request: Request, context: ExecutionContext): Promise<Response> {
+    const result = await handler(request, context);
+    const headers = new Headers(result.headers as Record<string, string>);
+    (result.multiValueHeaders ?? {}).setCookie?.forEach((cookie) => headers.append('set-cookie', cookie));
+
+    const body = result.isBase64Encoded
+      ? Buffer.from(result.body, 'base64')
+      : result.body;
+
+    return new Response(body, { status: result.statusCode, headers });
+  },
+};
+```
+
 #### Hono Example
 
 ```typescript
@@ -156,7 +186,7 @@ Creates a serverless handler for your Express, Koa, or Hono application.
 | Parameter          | Type                                    | Required | Description                                                  |
 | ------------------ | --------------------------------------- | -------- | ------------------------------------------------------------ |
 | `app`              | `Express \| Koa \| Hono`               | Yes      | Express, Koa, or Hono application instance                  |
-| `options.provider` | `'aliyun' \| 'tencent' \| 'volcengine' \| 'aws'` | No       | Explicitly specify cloud provider (auto-detected if omitted) |
+| `options.provider` | `'aliyun' \| 'tencent' \| 'volcengine' \| 'aws' \| 'cloudflare'` | No       | Explicitly specify cloud provider (auto-detected if omitted) |
 
 #### Returns
 
@@ -182,6 +212,7 @@ The adapter automatically detects the cloud provider by examining the `context` 
 | Tencent    | `tencentcloud_region`, `tencentcloud_appid`, `namespace` |
 | Volcengine | `requestId`, `region`, `function.memoryMb`               |
 | AWS        | `awsRequestId`, `invokedFunctionArn`, `functionName`     |
+| Cloudflare | web `Request` event + `waitUntil` on context             |
 
 ## License
 
