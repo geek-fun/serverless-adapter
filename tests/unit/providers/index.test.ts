@@ -81,11 +81,12 @@ describe('providers/index', () => {
   describe('getAllProviders', () => {
     it('should return map of all providers', () => {
       const providers = getAllProviders();
-      expect(providers.size).toBe(4);
+      expect(providers.size).toBe(5);
       expect(providers.has('aliyun')).toBe(true);
       expect(providers.has('tencent')).toBe(true);
       expect(providers.has('volcengine')).toBe(true);
       expect(providers.has('aws')).toBe(true);
+      expect(providers.has('cloudflare')).toBe(true);
     });
   });
 });
