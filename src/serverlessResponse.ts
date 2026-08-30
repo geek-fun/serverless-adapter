@@ -15,6 +15,53 @@ const addData = (stream: ServerlessResponse, data: Buffer | string | Uint8Array)
   }
 };
 
+const isWorkerd = (): boolean =>
+  typeof navigator !== 'undefined' && navigator.userAgent === 'Cloudflare-Workers';
+
+/**
+ * workerd ships a functional ServerResponse (OutgoingMessage → Writable) but stubs
+ * assignSocket, which the Node implementation uses to capture the body. The patch
+ * must target ServerResponse.prototype — Express swaps res.__proto__ at request
+ * time, so subclass-level overrides would be unreachable inside the framework.
+ */
+const patchWorkerdResponseCapture = (): void => {
+  const proto = ServerResponse.prototype as unknown as Record<PropertyKey, unknown>;
+  const originalWrite = proto.write as (this: unknown, ...args: unknown[]) => boolean;
+  const originalEnd = proto.end as (this: unknown, ...args: unknown[]) => unknown;
+
+  const collect = (res: unknown, chunk: unknown): void => {
+    const body = (res as Record<PropertyKey, unknown>)[BODY] as Buffer[] | undefined;
+    if (!body) {
+      return;
+    }
+    // workerd's Buffer is a view over a pooled store consumed by OutgoingMessage;
+    // snapshot immediately or the captured body is recycled before buildResponse runs
+    const isBuf = Buffer.isBuffer(chunk);
+    const buf = isBuf ? Buffer.from(chunk as Buffer) : Buffer.from(String(chunk));
+    body.push(buf);
+  };
+
+  proto.write = function (this: Record<PropertyKey, unknown>, ...args: unknown[]): boolean {
+    collect(this, args[0]);
+    return originalWrite.apply(this, args);
+  };
+
+  proto.end = function (this: Record<PropertyKey, unknown>, ...args: unknown[]): unknown {
+    if (args[0]) {
+      collect(this, args[0]);
+    }
+    const result = originalEnd.apply(this, args);
+    if ((this as Record<PropertyKey, unknown>)[BODY]) {
+      (this as unknown as { emit: (event: string) => void }).emit('finish');
+    }
+    return result;
+  };
+};
+
+if (isWorkerd()) {
+  patchWorkerdResponseCapture();
+}
+
 export default class ServerlessResponse extends ServerResponse {
   private _wroteHeader = false;
   private _header: string;
@@ -80,10 +127,14 @@ export default class ServerlessResponse extends ServerResponse {
 
     this[BODY] = [];
     this[HEADERS] = {};
-
+    this._header = '';
     this.useChunkedEncodingByDefault = false;
     this.chunkedEncoding = false;
-    this._header = '';
+
+    if (isWorkerd()) {
+      // assignSocket is a stub on workerd; the patched prototype captures output instead
+      return;
+    }
 
     this.assignSocket({
       _writableState: {},
