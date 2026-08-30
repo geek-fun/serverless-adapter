@@ -16,7 +16,8 @@ export interface ProviderNormalizeResult {
 
 export interface ServerlessProvider {
   readonly name: CloudProvider;
-  normalizeEvent(rawEvent: ProviderEvent): ServerlessEvent;
+  // Async allowed for providers whose event body must be read from a stream (e.g. Cloudflare Request)
+  normalizeEvent(rawEvent: ProviderEvent): ServerlessEvent | Promise<ServerlessEvent>;
   createRequest(event: ServerlessEvent): ProviderNormalizeResult;
   formatResponse(response: ServerlessResponse): unknown;
   detect(rawEvent: ProviderEvent, rawContext: ProviderContext): boolean;
@@ -25,7 +26,7 @@ export interface ServerlessProvider {
 export abstract class BaseProvider implements ServerlessProvider {
   abstract readonly name: CloudProvider;
 
-  abstract normalizeEvent(rawEvent: ProviderEvent): ServerlessEvent;
+  abstract normalizeEvent(rawEvent: ProviderEvent): ServerlessEvent | Promise<ServerlessEvent>;
 
   abstract detect(rawEvent: ProviderEvent, rawContext: ProviderContext): boolean;
 
