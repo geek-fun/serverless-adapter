@@ -25,6 +25,7 @@ import {
   AwsEvent,
   AwsHandler,
 } from './aws';
+import { CloudflareEvent, CloudflareResponse, CloudflareWorkerContext } from './cloudflare';
 
 export { AliyunApiGatewayContext, AliyunEvent, AliyunResponse };
 export {
@@ -50,6 +51,7 @@ export {
   AwsEvent,
   AwsHandler,
 };
+export { CloudflareEvent, CloudflareResponse, CloudflareWorkerContext };
 
 export type Context = AliyunApiGatewayContext;
 export type Event = Buffer;
@@ -86,7 +88,7 @@ export type ServerlessResponse = {
 /**
  * Supported cloud providers
  */
-export type CloudProvider = 'aliyun' | 'tencent' | 'volcengine' | 'aws';
+export type CloudProvider = 'aliyun' | 'tencent' | 'volcengine' | 'aws' | 'cloudflare';
 
 /**
  * Provider-specific context types
@@ -95,12 +97,18 @@ export type ProviderContext =
   | AliyunApiGatewayContext
   | TencentScfContext
   | VolcengineVefaasContext
-  | AwsLambdaContext;
+  | AwsLambdaContext
+  | CloudflareWorkerContext;
 
 /**
  * Provider-specific event types
  */
-export type ProviderEvent = AliyunEvent | TencentEvent | VolcengineEvent | AwsEvent;
+export type ProviderEvent =
+  | AliyunEvent
+  | TencentEvent
+  | VolcengineEvent
+  | AwsEvent
+  | CloudflareEvent;
 
 export type ServerlessAdapter = (app: Express | Application | HonoApp) => (
   event: Event,

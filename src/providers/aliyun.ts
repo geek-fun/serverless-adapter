@@ -18,7 +18,7 @@ export class AliyunProvider extends BaseProvider {
     } else if (typeof rawEvent === 'string') {
       raw = JSON.parse(rawEvent);
     } else {
-      raw = rawEvent as Record<string, unknown>;
+      raw = rawEvent as unknown as Record<string, unknown>;
     }
     return {
       path: (raw.path as string) || '/',
