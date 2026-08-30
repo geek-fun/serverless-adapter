@@ -28,7 +28,7 @@ describe('AliyunProvider', () => {
       };
 
       const rawEvent = Buffer.from(JSON.stringify(aliyunEvent));
-      const result = provider.normalizeEvent(rawEvent);
+      const result = provider.normalizeEvent(rawEvent as unknown as Buffer);
 
       expect(result.path).toBe('/api/users');
       expect(result.httpMethod).toBe('POST');
@@ -37,6 +37,46 @@ describe('AliyunProvider', () => {
       expect(result.queryParameters).toEqual({ page: '1' });
       expect(result.pathParameters).toEqual({ id: '123' });
       expect(result.isBase64Encoded).toBe(false);
+    });
+
+    it('should normalize a pre-parsed plain object event', () => {
+      const rawEvent = {
+        path: '/api/users',
+        httpMethod: 'GET',
+        headers: { 'content-type': 'application/json' },
+        queryParameters: { page: '2' },
+        pathParameters: { id: '42' },
+        body: undefined,
+        isBase64Encoded: false,
+      };
+
+      const result = provider.normalizeEvent(rawEvent as unknown as Buffer);
+
+      expect(result.path).toBe('/api/users');
+      expect(result.httpMethod).toBe('GET');
+      expect(result.headers).toEqual({ 'content-type': 'application/json' });
+      expect(result.queryParameters).toEqual({ page: '2' });
+      expect(result.pathParameters).toEqual({ id: '42' });
+      expect(result.body).toBeUndefined();
+    });
+
+    it('should normalize a string event payload', () => {
+      const rawEvent = JSON.stringify({
+        path: '/api/users',
+        httpMethod: 'POST',
+        headers: { 'content-type': 'application/json' },
+        queryParameters: { page: '3' },
+        pathParameters: {},
+        body: '{"name":"test"}',
+        isBase64Encoded: false,
+      });
+
+      const result = provider.normalizeEvent(rawEvent as unknown as Buffer);
+
+      expect(result.path).toBe('/api/users');
+      expect(result.httpMethod).toBe('POST');
+      expect(result.body).toBe('{"name":"test"}');
+      expect(result.queryParameters).toEqual({ page: '3' });
     });
 
     it('should handle event with no body', () => {
@@ -51,7 +91,7 @@ describe('AliyunProvider', () => {
       };
 
       const rawEvent = Buffer.from(JSON.stringify(aliyunEvent));
-      const result = provider.normalizeEvent(rawEvent);
+      const result = provider.normalizeEvent(rawEvent as unknown as Buffer);
 
       expect(result.body).toBeUndefined();
     });
@@ -70,7 +110,7 @@ describe('AliyunProvider', () => {
       };
 
       const rawEvent = Buffer.from(JSON.stringify(aliyunEvent));
-      const result = provider.normalizeEvent(rawEvent);
+      const result = provider.normalizeEvent(rawEvent as unknown as Buffer);
 
       expect(result.isBase64Encoded).toBe(true);
     });
@@ -86,7 +126,7 @@ describe('AliyunProvider', () => {
       };
 
       const rawEvent = Buffer.from(JSON.stringify(aliyunEvent));
-      const result = provider.normalizeEvent(rawEvent);
+      const result = provider.normalizeEvent(rawEvent as unknown as Buffer);
 
       expect(result.headers).toEqual({});
     });
@@ -102,7 +142,7 @@ describe('AliyunProvider', () => {
       };
 
       const rawEvent = Buffer.from(JSON.stringify(aliyunEvent));
-      const result = provider.normalizeEvent(rawEvent);
+      const result = provider.normalizeEvent(rawEvent as unknown as Buffer);
 
       expect(result.queryParameters).toEqual({});
     });
@@ -118,7 +158,7 @@ describe('AliyunProvider', () => {
       };
 
       const rawEvent = Buffer.from(JSON.stringify(aliyunEvent));
-      const result = provider.normalizeEvent(rawEvent);
+      const result = provider.normalizeEvent(rawEvent as unknown as Buffer);
 
       expect(result.pathParameters).toEqual({});
     });
@@ -134,7 +174,7 @@ describe('AliyunProvider', () => {
       };
 
       const rawEvent = Buffer.from(JSON.stringify(aliyunEvent));
-      const result = provider.normalizeEvent(rawEvent);
+      const result = provider.normalizeEvent(rawEvent as unknown as Buffer);
 
       expect(result.isBase64Encoded).toBe(false);
     });
