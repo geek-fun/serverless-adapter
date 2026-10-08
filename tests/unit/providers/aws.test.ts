@@ -5,6 +5,7 @@ import {
   AwsLambdaContext,
 } from '../../../src/types/aws';
 import { createAwsV1Event, createAwsV2Event, createAwsContext } from '../../fixtures/awsContext';
+import { awsScheduledEvent } from '../../fixtures/timerContext';
 
 describe('AWSProvider', () => {
   let provider: AWSProvider;
@@ -579,6 +580,49 @@ describe('AWSProvider', () => {
       };
 
       expect(provider.detect(rawEvent, context as unknown as AwsLambdaContext)).toBe(false);
+    });
+  });
+
+  describe('classifyEvent', () => {
+    it('should classify API Gateway v1 and v2 events as http', () => {
+      expect(provider.classifyEvent(Buffer.from(JSON.stringify(createAwsV1Event())))).toEqual({
+        kind: 'http',
+      });
+      expect(provider.classifyEvent(createAwsV2Event() as unknown as Buffer)).toEqual({
+        kind: 'http',
+      });
+    });
+
+    it('should classify an ALB event as http', () => {
+      const albEvent = {
+        httpMethod: 'GET',
+        path: '/api/test',
+        headers: {},
+        requestContext: { elb: { targetGroupArn: 'arn:aws:elasticloadbalancing:…' } },
+      };
+
+      expect(provider.classifyEvent(albEvent as unknown as Buffer)).toEqual({ kind: 'http' });
+    });
+
+    it('should classify an EventBridge scheduled rule as timer', () => {
+      expect(provider.classifyEvent(awsScheduledEvent as unknown as Buffer)).toEqual({
+        kind: 'timer',
+        detail: '6c2b1b0a-0000-0000-0000-000000000001',
+      });
+    });
+
+    it('should classify a scheduled event without an id as timer', () => {
+      const withoutId: Record<string, unknown> = { ...awsScheduledEvent };
+      delete withoutId['id'];
+
+      expect(provider.classifyEvent(withoutId as unknown as Buffer)).toEqual({ kind: 'timer' });
+    });
+
+    it('should classify queue and unrecognized payloads as unknown', () => {
+      const sqsEvent = Buffer.from(JSON.stringify({ Records: [{ eventSource: 'aws:sqs' }] }));
+
+      expect(provider.classifyEvent(sqsEvent)).toEqual({ kind: 'unknown' });
+      expect(provider.classifyEvent(Buffer.from('not json'))).toEqual({ kind: 'unknown' });
     });
   });
 });

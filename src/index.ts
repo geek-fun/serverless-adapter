@@ -5,6 +5,7 @@ import { constructFramework } from './framework';
 import { waitForStreamComplete, buildResponse } from './transport';
 import { detectProvider, getProvider } from './providers';
 import { debug } from './common';
+import { UnsupportedEventError, eventKeysOf } from './errors';
 import {
   CloudProvider,
   HonoApp,
@@ -15,6 +16,20 @@ import {
 
 export interface ServerlessAdapterOptions {
   provider?: CloudProvider;
+  /**
+   * What to do with an invocation that is not an HTTP event (a timer trigger,
+   * a queue event, …). Such an invocation has no request to build and no HTTP
+   * response contract, so answering it with the web framework silently reports
+   * success for work that never happened (issue #22).
+   *
+   * - `'error'` (default): throw an `UnsupportedEventError`, so FC / SCF / Lambda
+   *   record a failed invocation — visible in logs and alerts, and retried by the
+   *   platform's own retry policy.
+   * - `'ignore'`: skip classification and dispatch anyway, i.e. the historical
+   *   permissive behaviour. Deprecation escape hatch; prefer handling non-HTTP
+   *   triggers in your own entrypoint.
+   */
+  onUnhandledEvent?: 'error' | 'ignore';
 }
 
 type HandlerResult = {
@@ -46,6 +61,24 @@ const serverlessAdapter = (
 
     debug(`serverlessAdapter: Using provider: ${provider.name}`);
 
+    // Classification runs BEFORE the try/catch below on purpose: that catch turns
+    // errors into a 500 *response*, which a non-HTTP invocation would happily
+    // report as a success. An unhandled invocation has to throw to be visible.
+    if (options?.onUnhandledEvent !== 'ignore') {
+      const classification = provider.classifyEvent?.(event) ?? { kind: 'http' as const };
+
+      if (classification.kind !== 'http') {
+        throw new UnsupportedEventError({
+          provider: provider.name,
+          kind: classification.kind,
+          ...(classification.detail ? { detail: classification.detail } : {}),
+          eventKeys: eventKeysOf(event),
+        });
+      }
+    } else {
+      debug(`serverlessAdapter: onUnhandledEvent is 'ignore' — skipping event classification`);
+    }
+
     try {
       const normalizedEvent = await provider.normalizeEvent(event);
       const { request } = provider.createRequest(normalizedEvent);
@@ -76,3 +109,4 @@ export default serverlessAdapter;
 
 export * from './types';
 export * from './providers';
+export * from './errors';

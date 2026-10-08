@@ -7,10 +7,30 @@ import {
   ServerlessResponse,
   ProviderContext,
   ProviderEvent,
+  EventClassification,
 } from '../types';
 
 export class VolcengineProvider extends BaseProvider {
   readonly name = 'volcengine' as const;
+
+  /**
+   * veFaaS API Gateway events are positively identifiable (`path` + `method`).
+   * The veFaaS timer envelope is not verified yet (see issue #23), so anything
+   * else is reported as `unknown` rather than guessed into the HTTP path — the
+   * invocation still fails loudly instead of being answered by the app.
+   */
+  classifyEvent(rawEvent: ProviderEvent): EventClassification {
+    const raw = this.parseEventPayload(rawEvent);
+    if (!raw) {
+      return { kind: 'unknown' };
+    }
+
+    if (typeof raw.path === 'string' && typeof raw.method === 'string') {
+      return { kind: 'http' };
+    }
+
+    return { kind: 'unknown' };
+  }
 
   normalizeEvent(rawEvent: ProviderEvent): ServerlessEvent {
     const volcengineEvent = JSON.parse(

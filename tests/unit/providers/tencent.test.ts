@@ -6,6 +6,7 @@ import {
   createTencentContext,
   createTencentFunctionUrlEvent,
 } from '../../fixtures/tencentContext';
+import { tencentTimerEvent, unknownEvent } from '../../fixtures/timerContext';
 
 describe('TencentProvider', () => {
   let provider: TencentProvider;
@@ -421,6 +422,43 @@ describe('TencentProvider', () => {
       };
 
       expect(provider.detect(rawEvent, context as unknown as TencentScfContext)).toBe(false);
+    });
+  });
+
+  describe('classifyEvent', () => {
+    it('should classify legacy API Gateway and Function URL events as http', () => {
+      expect(provider.classifyEvent(Buffer.from(JSON.stringify(createTencentEvent())))).toEqual({
+        kind: 'http',
+      });
+      expect(
+        provider.classifyEvent(Buffer.from(JSON.stringify(createTencentFunctionUrlEvent()))),
+      ).toEqual({ kind: 'http' });
+    });
+
+    it('should classify a Function URL event without path as http', () => {
+      const rawEvent = Buffer.from(
+        JSON.stringify(createTencentFunctionUrlEvent({ path: undefined })),
+      );
+
+      expect(provider.classifyEvent(rawEvent)).toEqual({ kind: 'http' });
+    });
+
+    it('should classify a time trigger as timer and keep the trigger name', () => {
+      expect(provider.classifyEvent(tencentTimerEvent)).toEqual({
+        kind: 'timer',
+        detail: 'billing-run',
+      });
+    });
+
+    it('should classify a time trigger without a trigger name as timer', () => {
+      expect(provider.classifyEvent(Buffer.from(JSON.stringify({ Type: 'Timer' })))).toEqual({
+        kind: 'timer',
+      });
+    });
+
+    it('should classify unrecognized payloads as unknown', () => {
+      expect(provider.classifyEvent(unknownEvent)).toEqual({ kind: 'unknown' });
+      expect(provider.classifyEvent(Buffer.from('not json'))).toEqual({ kind: 'unknown' });
     });
   });
 });

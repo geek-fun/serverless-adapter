@@ -4,6 +4,7 @@ import {
   ProviderContext,
   ProviderEvent,
   CloudProvider,
+  EventClassification,
 } from '../types';
 import ServerlessRequest from '../serverlessRequest';
 import url from 'node:url';
@@ -21,6 +22,14 @@ export interface ServerlessProvider {
   createRequest(event: ServerlessEvent): ProviderNormalizeResult;
   formatResponse(response: ServerlessResponse): unknown;
   detect(rawEvent: ProviderEvent, rawContext: ProviderContext): boolean;
+  /**
+   * Classify a raw invocation before it is normalized, so that non-HTTP
+   * invocations are never coerced into a request for the web framework.
+   *
+   * Optional: providers registered outside this package that do not implement it
+   * keep the historical permissive behaviour.
+   */
+  classifyEvent?(rawEvent: ProviderEvent): EventClassification;
 }
 
 export abstract class BaseProvider implements ServerlessProvider {
@@ -29,6 +38,44 @@ export abstract class BaseProvider implements ServerlessProvider {
   abstract normalizeEvent(rawEvent: ProviderEvent): ServerlessEvent | Promise<ServerlessEvent>;
 
   abstract detect(rawEvent: ProviderEvent, rawContext: ProviderContext): boolean;
+
+  /**
+   * Parse a raw invocation into a plain object: Buffer and JSON string events are
+   * parsed, already-parsed objects are returned as-is, and anything unparseable
+   * yields `undefined` (the caller turns that into an `unknown` classification).
+   */
+  protected parseEventPayload(rawEvent: ProviderEvent): Record<string, unknown> | undefined {
+    try {
+      let parsed: unknown = rawEvent;
+      if (Buffer.isBuffer(rawEvent)) {
+        parsed = JSON.parse(rawEvent.toString());
+      } else if (typeof rawEvent === 'string') {
+        parsed = JSON.parse(rawEvent);
+      }
+
+      if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return parsed as Record<string, unknown>;
+      }
+    } catch {
+      // unparseable payloads are classified as `unknown` by the caller
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Positive HTTP markers shared by the API-Gateway style providers. A scheduled
+   * or queue event carries none of these fields, so it is never mistaken for an
+   * HTTP request.
+   */
+  protected looksLikeHttpEvent(raw: Record<string, unknown>): boolean {
+    return (
+      typeof raw.path === 'string' ||
+      typeof raw.rawPath === 'string' ||
+      typeof raw.httpMethod === 'string' ||
+      typeof raw.method === 'string'
+    );
+  }
 
   createRequest(event: ServerlessEvent): ProviderNormalizeResult {
     debug(`${this.name}Provider createRequest: ${JSON.stringify({ event })}`);

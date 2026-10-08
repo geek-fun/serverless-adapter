@@ -86,6 +86,26 @@ export type ServerlessResponse = {
 };
 
 /**
+ * What kind of invocation the provider received.
+ *
+ * `http` is the only kind this adapter can answer: API Gateway / Function URL /
+ * fetch invocations are normalized into a request for the web framework.
+ * `timer` and `unknown` (queue events, object storage notifications, …) have no
+ * HTTP request to build and no HTTP response contract to satisfy — dispatching
+ * them into the app silently answers a request nobody made (issue #22).
+ */
+export type EventKind = 'http' | 'timer' | 'unknown';
+
+/**
+ * Result of classifying a raw invocation before it is normalized.
+ */
+export interface EventClassification {
+  kind: EventKind;
+  /** Provider-specific hint for logs and error messages (e.g. the timer trigger name). */
+  detail?: string;
+}
+
+/**
  * Supported cloud providers
  */
 export type CloudProvider = 'aliyun' | 'tencent' | 'volcengine' | 'aws' | 'cloudflare';

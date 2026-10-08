@@ -1,6 +1,7 @@
 import { VolcengineProvider } from '../../../src/providers/volcengine';
 import { VolcengineApiGatewayEvent, VolcengineVefaasContext } from '../../../src/types/volcengine';
 import { createVolcengineEvent, createVolcengineContext } from '../../fixtures/volcengineContext';
+import { tencentTimerEvent, unknownEvent } from '../../fixtures/timerContext';
 
 describe('VolcengineProvider', () => {
   let provider: VolcengineProvider;
@@ -341,6 +342,22 @@ describe('VolcengineProvider', () => {
       };
 
       expect(provider.detect(rawEvent, context as unknown as VolcengineVefaasContext)).toBe(false);
+    });
+  });
+
+  describe('classifyEvent', () => {
+    it('should classify an API Gateway event as http', () => {
+      const rawEvent = Buffer.from(JSON.stringify(createVolcengineEvent()));
+
+      expect(provider.classifyEvent(rawEvent)).toEqual({ kind: 'http' });
+    });
+
+    it('should classify timer-shaped and unrecognized payloads as unknown', () => {
+      // The veFaaS timer envelope is not verified yet (issue #23), so it must be
+      // reported as unknown rather than guessed into the HTTP branch.
+      expect(provider.classifyEvent(tencentTimerEvent)).toEqual({ kind: 'unknown' });
+      expect(provider.classifyEvent(unknownEvent)).toEqual({ kind: 'unknown' });
+      expect(provider.classifyEvent(Buffer.from('not json'))).toEqual({ kind: 'unknown' });
     });
   });
 });
