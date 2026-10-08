@@ -7,7 +7,9 @@ import {
   ProviderEvent,
   AliyunResponse,
   EventClassification,
+  TimerEvent,
 } from '../types';
+import { decodeTimerPayload } from '../common';
 
 export class AliyunProvider extends BaseProvider {
   readonly name = 'aliyun' as const;
@@ -35,6 +37,26 @@ export class AliyunProvider extends BaseProvider {
     }
 
     return { kind: 'unknown' };
+  }
+
+  /**
+   * FC3 time trigger envelope: `{triggerTime, triggerName, payload}` (delivered
+   * as a Buffer, but plain objects are accepted as well). Positive markers only:
+   * an HTTP-shaped event is never claimed as a timer (issue #23).
+   */
+  normalizeTimerEvent(rawEvent: ProviderEvent): TimerEvent | null {
+    const raw = this.parseEventPayload(rawEvent);
+    if (!raw || this.looksLikeHttpEvent(raw) || typeof raw.triggerName !== 'string') {
+      return null;
+    }
+
+    return {
+      provider: this.name,
+      triggerName: raw.triggerName,
+      ...(typeof raw.triggerTime === 'string' ? { triggerTime: raw.triggerTime } : {}),
+      ...(raw.payload !== undefined ? { payload: decodeTimerPayload(raw.payload) } : {}),
+      raw: rawEvent,
+    };
   }
 
   normalizeEvent(rawEvent: ProviderEvent): ServerlessEvent {

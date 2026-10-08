@@ -97,6 +97,63 @@ export type ServerlessResponse = {
 export type EventKind = 'http' | 'timer' | 'unknown';
 
 /**
+ * Normalized timer invocation — the same shape for every provider (issue #23).
+ * Built by `normalizeTimerEvent` from the platform envelope and delivered to
+ * `events.timer`.
+ */
+export type TimerEvent = {
+  /** Informational (logs / telemetry); never a dispatch key. */
+  provider: CloudProvider;
+  triggerName?: string;
+  triggerTime?: string;
+  /** JSON-parsed when parseable, otherwise the raw string. */
+  payload?: unknown;
+  /** The untouched platform event — never lose information. */
+  raw: unknown;
+};
+
+/**
+ * Handler for positively identified timer invocations. Its return value is
+ * passed through verbatim — timer invocations have no HTTP response contract,
+ * so it is never wrapped into a fake `statusCode`/`body`.
+ */
+export type TimerEventHandler = (
+  event: TimerEvent,
+  context: ProviderContext,
+) => unknown | Promise<unknown>;
+
+/**
+ * Handler for invocations positively identified as non-HTTP but not timers
+ * (queue events, object-storage notifications, …). Receives the raw platform
+ * event untouched; the return value is passed through verbatim.
+ */
+export type NonHttpEventHandler = (
+  raw: unknown,
+  context: ProviderContext,
+) => unknown | Promise<unknown>;
+
+/**
+ * Non-HTTP handlers, the sibling of `provider` (issue #23): one deployment
+ * targets one cloud, so handlers are keyed by event kind, not by provider.
+ */
+export type EventHandlers = {
+  timer?: TimerEventHandler;
+  nonHttp?: NonHttpEventHandler;
+};
+
+/**
+ * A web framework application accepted by the adapter. Express is a function,
+ * Koa exposes `.callback`, Hono exposes `.fetch`.
+ */
+export type FrameworkApp = Express | Application | HonoApp;
+
+/**
+ * The `events` option of the symmetric entrypoint form, which additionally
+ * carries the HTTP app: `serverlessAdapter({ provider, events: { http, timer } })`.
+ */
+export type EventHandlersWithHttp = EventHandlers & { http: FrameworkApp };
+
+/**
  * Result of classifying a raw invocation before it is normalized.
  */
 export interface EventClassification {

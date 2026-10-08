@@ -5,10 +5,11 @@ import {
   ProviderEvent,
   CloudProvider,
   EventClassification,
+  TimerEvent,
 } from '../types';
 import ServerlessRequest from '../serverlessRequest';
 import url from 'node:url';
-import { debug, decodeRawEvent } from '../common';
+import { debug, decodeRawEvent, decodeTimerPayload } from '../common';
 
 export interface ProviderNormalizeResult {
   request: ServerlessRequest;
@@ -30,6 +31,14 @@ export interface ServerlessProvider {
    * keep the historical permissive behaviour.
    */
   classifyEvent?(rawEvent: ProviderEvent): EventClassification;
+  /**
+   * Parse a positively identified timer invocation into the normalized
+   * `TimerEvent` envelope (issue #23). Returns `null` for anything the provider
+   * does not positively recognize as its timer envelope.
+   *
+   * Optional: providers without a timer concept (Cloudflare) do not implement it.
+   */
+  normalizeTimerEvent?(rawEvent: ProviderEvent): TimerEvent | null;
 }
 
 export abstract class BaseProvider implements ServerlessProvider {
@@ -71,6 +80,27 @@ export abstract class BaseProvider implements ServerlessProvider {
       typeof raw.rawPath === 'string' ||
       typeof raw.httpMethod === 'string'
     );
+  }
+
+  /**
+   * Parse the `{Type: 'Timer', TriggerName, Time, Message}` envelope into the
+   * normalized `TimerEvent`. This is Tencent SCF's documented time-trigger
+   * shape; si also assumes it for veFaaS timers (issue #23). Positive markers
+   * only: anything without `Type: 'Timer'` yields `null`.
+   */
+  protected normalizeTypeTimerEvent(rawEvent: ProviderEvent): TimerEvent | null {
+    const raw = this.parseEventPayload(rawEvent);
+    if (!raw || raw.Type !== 'Timer') {
+      return null;
+    }
+
+    return {
+      provider: this.name,
+      ...(typeof raw.TriggerName === 'string' ? { triggerName: raw.TriggerName } : {}),
+      ...(typeof raw.Time === 'string' ? { triggerTime: raw.Time } : {}),
+      ...(raw.Message !== undefined ? { payload: decodeTimerPayload(raw.Message) } : {}),
+      raw: rawEvent,
+    };
   }
 
   createRequest(event: ServerlessEvent): ProviderNormalizeResult {

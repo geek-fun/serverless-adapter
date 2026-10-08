@@ -8,6 +8,7 @@ import {
   ProviderContext,
   ProviderEvent,
   EventClassification,
+  TimerEvent,
 } from '../types';
 
 export class VolcengineProvider extends BaseProvider {
@@ -15,9 +16,11 @@ export class VolcengineProvider extends BaseProvider {
 
   /**
    * veFaaS API Gateway events are positively identifiable (`path` + `method`).
-   * The veFaaS timer envelope is not verified yet (see issue #23), so anything
-   * else is reported as `unknown` rather than guessed into the HTTP path — the
-   * invocation still fails loudly instead of being answered by the app.
+   *
+   * Timer invocations are recognized by the positive `Type: 'Timer'` marker of
+   * the Tencent-style envelope that serverlessinsight generates for veFaaS
+   * timers; the real platform envelope is not verified yet, so anything else is
+   * reported as `unknown` rather than guessed into the HTTP path (issue #23).
    */
   classifyEvent(rawEvent: ProviderEvent): EventClassification {
     const raw = this.parseEventPayload(rawEvent);
@@ -29,7 +32,20 @@ export class VolcengineProvider extends BaseProvider {
       return { kind: 'http' };
     }
 
+    if (raw.Type === 'Timer') {
+      return typeof raw.TriggerName === 'string'
+        ? { kind: 'timer', detail: raw.TriggerName }
+        : { kind: 'timer' };
+    }
+
     return { kind: 'unknown' };
+  }
+
+  /**
+   * The Tencent-style timer envelope si assumes for veFaaS (issue #23).
+   */
+  normalizeTimerEvent(rawEvent: ProviderEvent): TimerEvent | null {
+    return this.normalizeTypeTimerEvent(rawEvent);
   }
 
   normalizeEvent(rawEvent: ProviderEvent): ServerlessEvent {

@@ -16,3 +16,30 @@ export const decodeRawEvent = (event: unknown): unknown => {
 
   return event;
 };
+
+/**
+ * Normalize a timer payload for the `TimerEvent` envelope (issue #23):
+ * JSON-parsed when parseable, otherwise the raw string. Buffers are decoded
+ * first — Aliyun FC3 delivers the timer payload as a Buffer in practice.
+ * Non-string payloads (objects, numbers) pass through untouched.
+ */
+export const decodeTimerPayload = (payload: unknown): unknown => {
+  if (Buffer.isBuffer(payload)) {
+    const text = payload.toString();
+    try {
+      return JSON.parse(text);
+    } catch {
+      return text;
+    }
+  }
+
+  if (typeof payload === 'string') {
+    try {
+      return JSON.parse(payload);
+    } catch {
+      return payload;
+    }
+  }
+
+  return payload;
+};
