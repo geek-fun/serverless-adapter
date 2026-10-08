@@ -266,7 +266,7 @@ What is recognized per provider:
 | Aliyun FC3      | `{triggerTime, triggerName, payload}`                              | Delivered as a Buffer; plain objects are accepted as well                                                                                                |
 | Tencent SCF     | `{Type: 'Timer', TriggerName, Time, Message}`                      | —                                                                                                                                                        |
 | Volcengine veFaaS | —                                                                | The veFaaS timer envelope is not verified yet, so it is reported as `unknown` (the invocation still fails loudly)                                        |
-| AWS             | `{version, id, 'detail-type': 'Scheduled Event', source: 'aws.events'}` | An EventBridge **Scheduler** invoking the function with a custom input is indistinguishable from an HTTP event; it is reported as `unknown` unless it matches a known HTTP shape |
+| AWS             | `{version, id, 'detail-type': 'Scheduled Event', source: 'aws.events', resources: [rule ARN]}` | The rule name from `resources[0]` is reported in the error (`id` as fallback). An EventBridge **Scheduler** invoking the function with a custom input is indistinguishable from an HTTP event; it is reported as `unknown` unless it matches a known HTTP shape |
 | Cloudflare      | —                                                                  | Cron Triggers are delivered to the Worker's separate `scheduled()` export, which this adapter never sees                                                 |
 
 ## Provider Detection

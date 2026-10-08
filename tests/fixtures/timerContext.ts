@@ -39,7 +39,7 @@ export const awsScheduledEvent = {
   account: '123456789012',
   time: '2026-10-01T03:23:00Z',
   region: 'us-east-1',
-  resources: [],
+  resources: ['arn:aws:events:us-east-1:123456789012:rule/billing-run'],
   detail: {},
 };
 
