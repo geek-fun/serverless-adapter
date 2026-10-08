@@ -7,6 +7,7 @@ import {
   ServerlessResponse,
   ProviderContext,
   ProviderEvent,
+  EventClassification,
 } from '../types';
 
 /**
@@ -14,6 +15,10 @@ import {
  * API Gateway trigger format via negative exclusion: queryStringParameters and
  * requestContext are always present on legacy events and never on Function URL events.
  * `== null` tolerates tooling-injected `null` for absent fields.
+ *
+ * This is a *dialect* discriminator, not a "is this HTTP?" check: Function URL
+ * events may omit `path`. Whether an invocation is an HTTP event at all is
+ * decided by `classifyEvent` from positive markers (see below).
  */
 const isFunctionUrlEvent = (raw: Record<string, unknown>): boolean =>
   raw.queryStringParameters == null && raw.requestContext == null;
@@ -29,6 +34,36 @@ export class TencentProvider extends BaseProvider {
    * singleton, but this flag is always overwritten before it is read within an invocation.
    */
   private isFunctionUrlInvocation = false;
+
+  /**
+   * SCF time triggers deliver `{Type: 'Timer', TriggerName, Time, Message}` to the
+   * same handler that serves Function URL / API Gateway requests.
+   *
+   * Only positive HTTP markers count here — `isFunctionUrlEvent` is a dialect
+   * discriminator (negative exclusion) and would happily claim a timer event.
+   */
+  classifyEvent(rawEvent: ProviderEvent): EventClassification {
+    const raw = this.parseEventPayload(rawEvent);
+    if (!raw) {
+      return { kind: 'unknown' };
+    }
+
+    if (raw.Type === 'Timer') {
+      return typeof raw.TriggerName === 'string'
+        ? { kind: 'timer', detail: raw.TriggerName }
+        : { kind: 'timer' };
+    }
+
+    if (
+      this.looksLikeHttpEvent(raw) ||
+      raw.queryStringParameters != null ||
+      raw.requestContext != null
+    ) {
+      return { kind: 'http' };
+    }
+
+    return { kind: 'unknown' };
+  }
 
   normalizeEvent(rawEvent: ProviderEvent): ServerlessEvent {
     const raw = JSON.parse(Buffer.from(rawEvent as Buffer).toString()) as Record<string, unknown>;

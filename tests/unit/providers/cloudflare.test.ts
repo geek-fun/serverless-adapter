@@ -192,4 +192,18 @@ describe('CloudflareProvider', () => {
       expect(Buffer.from(result.body, 'base64')).toEqual(Buffer.from([0x89, 0x50, 0x4e, 0x47]));
     });
   });
+
+  describe('classifyEvent', () => {
+    it('should classify a Request invocation as http', () => {
+      expect(provider.classifyEvent(new Request('https://worker.example.com/api/test'))).toEqual({
+        kind: 'http',
+      });
+    });
+
+    it('should classify a non-Request invocation as unknown', () => {
+      expect(provider.classifyEvent(Buffer.from(JSON.stringify({ foo: 'bar' })))).toEqual({
+        kind: 'unknown',
+      });
+    });
+  });
 });

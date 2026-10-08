@@ -1,6 +1,11 @@
 import { AliyunProvider } from '../../../src/providers/aliyun';
 import { defaultContext } from '../../fixtures/fcContext';
 import { AliyunApiGatewayContext } from '../../../src/types/aliyun';
+import {
+  aliyunTimerEvent,
+  aliyunTimerEventObject,
+  unknownEvent,
+} from '../../fixtures/timerContext';
 
 describe('AliyunProvider', () => {
   let provider: AliyunProvider;
@@ -282,6 +287,45 @@ describe('AliyunProvider', () => {
       };
 
       expect(provider.detect(rawEvent, context as unknown as AliyunApiGatewayContext)).toBe(false);
+    });
+  });
+
+  describe('classifyEvent', () => {
+    it('should classify Buffer, object and string API Gateway events as http', () => {
+      const httpEvent = {
+        path: '/api/users',
+        httpMethod: 'GET',
+        headers: {},
+        queryParameters: {},
+        pathParameters: {},
+        body: undefined,
+        isBase64Encoded: false,
+      };
+
+      expect(provider.classifyEvent(Buffer.from(JSON.stringify(httpEvent)))).toEqual({
+        kind: 'http',
+      });
+      expect(provider.classifyEvent(httpEvent as unknown as Buffer)).toEqual({ kind: 'http' });
+      expect(provider.classifyEvent(JSON.stringify(httpEvent) as unknown as Buffer)).toEqual({
+        kind: 'http',
+      });
+    });
+
+    it('should classify a time trigger as timer and keep the trigger name', () => {
+      expect(provider.classifyEvent(aliyunTimerEvent)).toEqual({
+        kind: 'timer',
+        detail: 'billing-run',
+      });
+      expect(provider.classifyEvent(aliyunTimerEventObject as unknown as Buffer)).toEqual({
+        kind: 'timer',
+        detail: 'billing-run',
+      });
+    });
+
+    it('should classify unrecognized payloads as unknown', () => {
+      expect(provider.classifyEvent(unknownEvent)).toEqual({ kind: 'unknown' });
+      expect(provider.classifyEvent(Buffer.from('not json'))).toEqual({ kind: 'unknown' });
+      expect(provider.classifyEvent(Buffer.from('[]'))).toEqual({ kind: 'unknown' });
     });
   });
 });

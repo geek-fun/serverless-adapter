@@ -5,6 +5,7 @@ import {
   ProviderContext,
   ProviderEvent,
   AwsResponse,
+  EventClassification,
 } from '../types';
 
 /**
@@ -13,6 +14,31 @@ import {
  */
 export class AWSProvider extends BaseProvider {
   readonly name = 'aws' as const;
+
+  /**
+   * A Lambda function can be invoked by API Gateway, by EventBridge (scheduled
+   * rules) and by other event sources, all through the same handler. Only the
+   * API Gateway shapes can be answered; an EventBridge **Scheduler** invoking the
+   * function with a custom input is indistinguishable from a hand-written HTTP
+   * event, so only the documented `Scheduled Event` envelope is recognized as a
+   * timer (see issue #23).
+   */
+  classifyEvent(rawEvent: ProviderEvent): EventClassification {
+    const raw = this.parseEventPayload(rawEvent);
+    if (!raw) {
+      return { kind: 'unknown' };
+    }
+
+    if (raw['detail-type'] === 'Scheduled Event' && raw.source === 'aws.events') {
+      return typeof raw.id === 'string' ? { kind: 'timer', detail: raw.id } : { kind: 'timer' };
+    }
+
+    if (isV2Event(raw) || isV1Event(raw) || isLoadBalancerEvent(raw)) {
+      return { kind: 'http' };
+    }
+
+    return { kind: 'unknown' };
+  }
 
   normalizeEvent(rawEvent: ProviderEvent): ServerlessEvent {
     let raw: Record<string, unknown>;
@@ -71,6 +97,22 @@ export class AWSProvider extends BaseProvider {
 
 function isV2Event(event: Record<string, unknown>): boolean {
   return event.version === '2.0';
+}
+
+/** REST API v1 (also used by ALB / VPC Lattice): path + httpMethod are always present. */
+function isV1Event(event: Record<string, unknown>): boolean {
+  return typeof event.path === 'string' && typeof event.httpMethod === 'string';
+}
+
+function isLoadBalancerEvent(event: Record<string, unknown>): boolean {
+  const requestContext = event.requestContext;
+  return (
+    typeof event.httpMethod === 'string' &&
+    requestContext !== null &&
+    typeof requestContext === 'object' &&
+    !Array.isArray(requestContext) &&
+    'elb' in requestContext
+  );
 }
 
 function extractMethodFromRouteKey(routeKey: string): string {

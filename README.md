@@ -183,10 +183,11 @@ Creates a serverless handler for your Express, Koa, or Hono application.
 
 #### Parameters
 
-| Parameter          | Type                                    | Required | Description                                                  |
-| ------------------ | --------------------------------------- | -------- | ------------------------------------------------------------ |
-| `app`              | `Express \| Koa \| Hono`               | Yes      | Express, Koa, or Hono application instance                  |
-| `options.provider` | `'aliyun' \| 'tencent' \| 'volcengine' \| 'aws' \| 'cloudflare'` | No       | Explicitly specify cloud provider (auto-detected if omitted) |
+| Parameter                  | Type                                    | Required | Description                                                  |
+| -------------------------- | --------------------------------------- | -------- | ------------------------------------------------------------ |
+| `app`                      | `Express \| Koa \| Hono`               | Yes      | Express, Koa, or Hono application instance                  |
+| `options.provider`         | `'aliyun' \| 'tencent' \| 'volcengine' \| 'aws' \| 'cloudflare'` | No       | Explicitly specify cloud provider (auto-detected if omitted) |
+| `options.onUnhandledEvent` | `'error' \| 'ignore'`                   | No       | Policy for non-HTTP invocations. Defaults to `'error'` (throw); `'ignore'` restores the historical behaviour — see [Non-HTTP invocations](#non-http-invocations) |
 
 #### Returns
 
@@ -201,6 +202,72 @@ A function that handles serverless events:
     isBase64Encoded: boolean;
   }>;
 ```
+
+## Non-HTTP invocations
+
+On Aliyun FC, Tencent SCF, Volcengine veFaaS and AWS Lambda **one function has one
+handler and every trigger type is delivered to it as a different event shape**. A
+timer trigger, a queue event or an object-storage notification therefore reaches
+the same handler as an HTTP request — but it carries no request to build and no
+HTTP response contract to satisfy.
+
+Dispatching such an invocation into the web framework answers a request nobody
+made, and the platform records the invocation as **successful**: a scheduled job
+then silently never runs. The adapter classifies every invocation before it is
+normalized, and refuses the ones it cannot answer:
+
+```typescript
+const http = serverlessAdapter(app);
+
+export const handler = (event, context) => http(event, context);
+// A timer trigger makes this invocation reject with:
+//   UnsupportedEventError: Unsupported timer invocation for provider "aliyun"
+//   (trigger "billing-run"): this adapter only handles HTTP events. Handle
+//   non-HTTP triggers in your own entrypoint, or pass
+//   { onUnhandledEvent: 'ignore' } to keep the previous behaviour.
+//   Event keys: triggerTime, triggerName, payload.
+```
+
+Handle non-HTTP triggers in your own entrypoint (the shape of the event is the
+only thing telling them apart):
+
+```typescript
+import serverlessAdapter from '@geek-fun/serverless-adapter';
+
+const http = serverlessAdapter(app);
+
+export const handler = async (event, context) => {
+  const trigger = parse(event); // your own provider-specific parsing
+
+  if (trigger?.job === 'billing-run') {
+    return runBillingRun(trigger);
+  }
+
+  return http(event, context);
+};
+```
+
+| Invocation                            | Default (`'error'`)                              | `'ignore'`                    |
+| ------------------------------------- | ------------------------------------------------ | ----------------------------- |
+| HTTP event                            | handled by the framework                         | handled by the framework      |
+| Recognized non-HTTP event (timer, …)  | `UnsupportedEventError` — invocation fails       | dispatched anyway (legacy)    |
+| Unrecognized event                    | `UnsupportedEventError` — invocation fails       | dispatched anyway (legacy)    |
+
+Failing the invocation matters: FC / SCF / Lambda only mark an invocation as
+failed when the handler throws, which is what puts it into logs, alerts and the
+platform's retry policy. `onUnhandledEvent: 'ignore'` exists only as a
+deprecation escape hatch for code that relied on the previous permissive
+behaviour.
+
+What is recognized per provider:
+
+| Provider        | Recognized timer envelope                                          | Notes                                                                                                                                                    |
+| --------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Aliyun FC3      | `{triggerTime, triggerName, payload}`                              | Delivered as a Buffer; plain objects are accepted as well                                                                                                |
+| Tencent SCF     | `{Type: 'Timer', TriggerName, Time, Message}`                      | —                                                                                                                                                        |
+| Volcengine veFaaS | —                                                                | The veFaaS timer envelope is not verified yet, so it is reported as `unknown` (the invocation still fails loudly)                                        |
+| AWS             | `{version, id, 'detail-type': 'Scheduled Event', source: 'aws.events'}` | An EventBridge **Scheduler** invoking the function with a custom input is indistinguishable from an HTTP event; it is reported as `unknown` unless it matches a known HTTP shape |
+| Cloudflare      | —                                                                  | Cron Triggers are delivered to the Worker's separate `scheduled()` export, which this adapter never sees                                                 |
 
 ## Provider Detection
 

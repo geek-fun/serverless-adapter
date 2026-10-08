@@ -6,10 +6,36 @@ import {
   ProviderContext,
   ProviderEvent,
   AliyunResponse,
+  EventClassification,
 } from '../types';
 
 export class AliyunProvider extends BaseProvider {
   readonly name = 'aliyun' as const;
+
+  /**
+   * Function Compute delivers every trigger type to the same handler as a
+   * different event shape, so the shape is the only thing telling an API Gateway
+   * request apart from a time trigger (a `{triggerTime, triggerName, payload}`
+   * event — the docs list it under "Time triggers").
+   *
+   * @see https://www.alibabacloud.com/help/en/functioncompute/formats-of-event-for-different-triggers-1
+   */
+  classifyEvent(rawEvent: ProviderEvent): EventClassification {
+    const raw = this.parseEventPayload(rawEvent);
+    if (!raw) {
+      return { kind: 'unknown' };
+    }
+
+    if (this.looksLikeHttpEvent(raw)) {
+      return { kind: 'http' };
+    }
+
+    if (typeof raw.triggerName === 'string') {
+      return { kind: 'timer', detail: raw.triggerName };
+    }
+
+    return { kind: 'unknown' };
+  }
 
   normalizeEvent(rawEvent: ProviderEvent): ServerlessEvent {
     let raw: Record<string, unknown>;

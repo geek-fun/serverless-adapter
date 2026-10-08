@@ -6,15 +6,27 @@ import {
   ServerlessResponse,
   ProviderContext,
   ProviderEvent,
+  EventClassification,
 } from '../types';
 
 /**
  * Cloudflare Workers dispatches fetch(Request, ExecutionContext) — the raw web
  * standard Request is the event and ExecutionContext exposes waitUntil.
+ *
+ * Cron Triggers are dispatched to a separate `scheduled()` export that this
+ * adapter never sees, so only `Request` invocations are classified as HTTP here.
  * @see https://developers.cloudflare.com/workers/runtime-apis/handlers/fetch/
  */
 export class CloudflareProvider extends BaseProvider {
   readonly name = 'cloudflare' as const;
+
+  classifyEvent(rawEvent: ProviderEvent): EventClassification {
+    if (typeof Request === 'undefined' || !(rawEvent instanceof Request)) {
+      return { kind: 'unknown' };
+    }
+
+    return { kind: 'http' };
+  }
 
   async normalizeEvent(rawEvent: ProviderEvent): Promise<ServerlessEvent> {
     const request = rawEvent as unknown as Request;
