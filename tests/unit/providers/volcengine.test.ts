@@ -352,12 +352,49 @@ describe('VolcengineProvider', () => {
       expect(provider.classifyEvent(rawEvent)).toEqual({ kind: 'http' });
     });
 
-    it('should classify timer-shaped and unrecognized payloads as unknown', () => {
-      // The veFaaS timer envelope is not verified yet (issue #23), so it must be
-      // reported as unknown rather than guessed into the HTTP branch.
-      expect(provider.classifyEvent(tencentTimerEvent)).toEqual({ kind: 'unknown' });
+    it('should classify a Tencent-style timer envelope as timer', () => {
+      // si generates the Tencent-shape envelope for veFaaS timers; the positive
+      // `Type: 'Timer'` marker is recognized (issue #23).
+      expect(provider.classifyEvent(tencentTimerEvent)).toEqual({
+        kind: 'timer',
+        detail: 'billing-run',
+      });
+    });
+
+    it('should classify a timer envelope without a trigger name as timer', () => {
+      expect(provider.classifyEvent(Buffer.from(JSON.stringify({ Type: 'Timer' })))).toEqual({
+        kind: 'timer',
+      });
+    });
+
+    it('should classify unrecognized payloads as unknown', () => {
       expect(provider.classifyEvent(unknownEvent)).toEqual({ kind: 'unknown' });
       expect(provider.classifyEvent(Buffer.from('not json'))).toEqual({ kind: 'unknown' });
+    });
+  });
+
+  describe('normalizeTimerEvent', () => {
+    it('should normalize the Tencent-style timer envelope', () => {
+      const rawEvent = Buffer.from(
+        JSON.stringify({
+          Type: 'Timer',
+          TriggerName: 'billing-run',
+          Time: '2026-10-01T03:23:00Z',
+          Message: '{"job":"billing-run"}',
+        }),
+      );
+
+      expect(provider.normalizeTimerEvent(rawEvent)).toEqual({
+        provider: 'volcengine',
+        triggerName: 'billing-run',
+        triggerTime: '2026-10-01T03:23:00Z',
+        payload: { job: 'billing-run' },
+        raw: rawEvent,
+      });
+    });
+
+    it('should return null for a non-timer event', () => {
+      expect(provider.normalizeTimerEvent(unknownEvent)).toBeNull();
     });
   });
 });

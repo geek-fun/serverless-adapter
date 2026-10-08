@@ -43,5 +43,28 @@ export const awsScheduledEvent = {
   detail: {},
 };
 
+/**
+ * Volcengine veFaaS timer, as serverlessinsight generates it: the Tencent-shape
+ * `{Type: 'Timer', …}` envelope (the real platform envelope is not verified yet).
+ */
+export const volcengineTimerEvent = Buffer.from(
+  JSON.stringify({
+    Type: 'Timer',
+    TriggerName: 'billing-run',
+    Time: '2026-10-01T03:23:00Z',
+    Message: '{"job":"billing-run"}',
+  }),
+);
+
+/**
+ * An EventBridge **Scheduler** invocation with a custom input: it carries no
+ * recognizable marker and is indistinguishable from a hand-written event, so it
+ * must stay `unknown` (issue #23).
+ */
+export const awsSchedulerCustomInputEvent = {
+  jobId: 'billing-run',
+  scheduledAt: '2026-10-01T03:23:00Z',
+};
+
 /** An event that matches no known envelope at all (e.g. a queue message). */
 export const unknownEvent = Buffer.from(JSON.stringify({ foo: 'bar', Records: [] }));

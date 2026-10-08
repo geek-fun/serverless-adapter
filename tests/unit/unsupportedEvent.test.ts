@@ -2,6 +2,7 @@ import express from 'express4';
 import Koa from 'koa2';
 import { Hono } from 'hono';
 import serverlessAdapter, {
+  FrameworkApp,
   UnsupportedEventError,
   eventKeysOf,
   registerProvider,
@@ -203,7 +204,7 @@ describe('non-HTTP invocations (issue #22)', () => {
 
     for (const [name, createApp] of frameworks) {
       it(`should reject a timer invocation before a ${name} app runs`, async () => {
-        const handler = serverlessAdapter(createApp() as Parameters<typeof serverlessAdapter>[0], {
+        const handler = serverlessAdapter(createApp() as FrameworkApp, {
           provider: 'aliyun',
         });
 

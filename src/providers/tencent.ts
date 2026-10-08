@@ -8,6 +8,7 @@ import {
   ProviderContext,
   ProviderEvent,
   EventClassification,
+  TimerEvent,
 } from '../types';
 
 /**
@@ -63,6 +64,14 @@ export class TencentProvider extends BaseProvider {
     }
 
     return { kind: 'unknown' };
+  }
+
+  /**
+   * SCF time trigger envelope: `{Type: 'Timer', TriggerName, Time, Message}`
+   * (issue #23).
+   */
+  normalizeTimerEvent(rawEvent: ProviderEvent): TimerEvent | null {
+    return this.normalizeTypeTimerEvent(rawEvent);
   }
 
   normalizeEvent(rawEvent: ProviderEvent): ServerlessEvent {

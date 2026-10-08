@@ -6,7 +6,9 @@ import {
   ProviderEvent,
   AwsResponse,
   EventClassification,
+  TimerEvent,
 } from '../types';
+import { decodeTimerPayload } from '../common';
 
 /**
  * AWS Lambda + API Gateway Provider
@@ -39,6 +41,28 @@ export class AWSProvider extends BaseProvider {
     }
 
     return { kind: 'unknown' };
+  }
+
+  /**
+   * EventBridge scheduled-rule envelope (issue #23). An EventBridge **Scheduler**
+   * invoking the function with a custom input carries no recognizable marker,
+   * so it yields `null` (classified `unknown`) — it is indistinguishable from a
+   * hand-written HTTP event in general.
+   */
+  normalizeTimerEvent(rawEvent: ProviderEvent): TimerEvent | null {
+    const raw = this.parseEventPayload(rawEvent);
+    if (!raw || raw['detail-type'] !== 'Scheduled Event' || raw.source !== 'aws.events') {
+      return null;
+    }
+
+    const triggerName = scheduledRuleDetail(raw);
+    return {
+      provider: this.name,
+      ...(triggerName !== undefined ? { triggerName } : {}),
+      ...(typeof raw.time === 'string' ? { triggerTime: raw.time } : {}),
+      ...(raw.detail !== undefined ? { payload: decodeTimerPayload(raw.detail) } : {}),
+      raw: rawEvent,
+    };
   }
 
   normalizeEvent(rawEvent: ProviderEvent): ServerlessEvent {

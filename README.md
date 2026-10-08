@@ -179,7 +179,8 @@ export const handler = serverlessAdapter(app);
 
 ### `serverlessAdapter(app, options?)`
 
-Creates a serverless handler for your Express, Koa, or Hono application.
+Creates a serverless handler for your Express, Koa, or Hono application. This
+positional form is the canonical shape for HTTP-only apps.
 
 #### Parameters
 
@@ -187,7 +188,8 @@ Creates a serverless handler for your Express, Koa, or Hono application.
 | -------------------------- | --------------------------------------- | -------- | ------------------------------------------------------------ |
 | `app`                      | `Express \| Koa \| Hono`               | Yes      | Express, Koa, or Hono application instance                  |
 | `options.provider`         | `'aliyun' \| 'tencent' \| 'volcengine' \| 'aws' \| 'cloudflare'` | No       | Explicitly specify cloud provider (auto-detected if omitted) |
-| `options.onUnhandledEvent` | `'error' \| 'ignore'`                   | No       | Policy for non-HTTP invocations. Defaults to `'error'` (throw); `'ignore'` restores the historical behaviour — see [Non-HTTP invocations](#non-http-invocations) |
+| `options.events`           | `{ timer?, nonHttp? }`                  | No       | Handlers for non-HTTP triggers, keyed by event kind — see [Timer and non-HTTP triggers](#timer-and-non-http-triggers) |
+| `options.onUnhandledEvent` | `'error' \| 'ignore'`                   | No       | What to do with a non-HTTP invocation that has no matching `events` handler. Defaults to `'error'` (throw); `'ignore'` restores the historical behaviour — see [Timer and non-HTTP triggers](#timer-and-non-http-triggers) |
 
 #### Returns
 
@@ -203,7 +205,32 @@ A function that handles serverless events:
   }>;
 ```
 
-## Non-HTTP invocations
+HTTP invocations return this shape; the result of a timer / non-HTTP invocation
+is whatever the corresponding `events` handler returned, passed through
+verbatim.
+
+### `serverlessAdapter({ provider, events: { http, timer } })` (symmetric form)
+
+For multi-trigger functions the HTTP app can be declared inside `events`, next
+to the other handlers. Both forms are accepted — the first argument is
+unambiguous to tell apart (an Express app is a function, Koa exposes
+`.callback`, Hono exposes `.fetch`, an options object has none of those):
+
+```typescript
+// HTTP-only app — canonical, unchanged
+serverlessAdapter(app, { provider: 'volcengine' });
+
+// multi-trigger function (HTTP + timer) — uniform, recommended for this case
+serverlessAdapter({
+  provider: 'volcengine',
+  events: { http: app, timer: runTimerJob },
+});
+```
+
+The symmetric form takes the same `provider` / `onUnhandledEvent` options; the
+positional form stays canonical for HTTP-only apps.
+
+## Timer and non-HTTP triggers
 
 On Aliyun FC, Tencent SCF, Volcengine veFaaS and AWS Lambda **one function has one
 handler and every trigger type is delivered to it as a different event shape**. A
@@ -213,8 +240,9 @@ HTTP response contract to satisfy.
 
 Dispatching such an invocation into the web framework answers a request nobody
 made, and the platform records the invocation as **successful**: a scheduled job
-then silently never runs. The adapter classifies every invocation before it is
-normalized, and refuses the ones it cannot answer:
+then silently never runs. The adapter therefore classifies every invocation
+before it is normalized. With `events` handlers registered, non-HTTP invocations
+are routed to them; without a matching handler the invocation fails loudly:
 
 ```typescript
 const http = serverlessAdapter(app);
@@ -228,30 +256,69 @@ export const handler = (event, context) => http(event, context);
 //   Event keys: triggerTime, triggerName, payload.
 ```
 
-Handle non-HTTP triggers in your own entrypoint (the shape of the event is the
-only thing telling them apart):
+### Handling timers with `events.timer`
+
+Register an `events.timer` handler and the adapter normalizes every positively
+identified timer invocation into a provider-agnostic `TimerEvent` for you:
 
 ```typescript
 import serverlessAdapter from '@geek-fun/serverless-adapter';
 
-const http = serverlessAdapter(app);
-
-export const handler = async (event, context) => {
-  const trigger = parse(event); // your own provider-specific parsing
-
-  if (trigger?.job === 'billing-run') {
-    return runBillingRun(trigger);
+const runTimerJob = async (event: TimerEvent) => {
+  console.log(`timer ${event.triggerName} fired at ${event.triggerTime}`);
+  if (event.payload?.job === 'billing-run') {
+    await runBillingRun();
   }
+  // the return value is passed through to the platform verbatim —
+  // it is never wrapped into a fake statusCode/body
+};
 
-  return http(event, context);
+export const handler = serverlessAdapter(app, {
+  provider: 'aliyun',
+  events: {
+    timer: runTimerJob,
+    // anything positively identified as non-HTTP but not a timer
+    // (queue events, object-storage notifications, …)
+    nonHttp: (raw, context) => handleOtherTrigger(raw, context),
+  },
+});
+```
+
+The normalized envelope is identical across providers:
+
+```typescript
+export type TimerEvent = {
+  provider: CloudProvider; // informational (logs/telemetry), never a dispatch key
+  triggerName?: string;
+  triggerTime?: string;
+  payload?: unknown;       // JSON-parsed when parseable, otherwise the raw string
+  raw: unknown;            // the untouched platform event — never lose information
 };
 ```
 
-| Invocation                            | Default (`'error'`)                              | `'ignore'`                    |
-| ------------------------------------- | ------------------------------------------------ | ----------------------------- |
-| HTTP event                            | handled by the framework                         | handled by the framework      |
-| Recognized non-HTTP event (timer, …)  | `UnsupportedEventError` — invocation fails       | dispatched anyway (legacy)    |
-| Unrecognized event                    | `UnsupportedEventError` — invocation fails       | dispatched anyway (legacy)    |
+Or use the symmetric form, which reads the same as the deployment it describes:
+
+```typescript
+export const handler = serverlessAdapter({
+  provider: 'aliyun',
+  events: { http: app, timer: runTimerJob },
+});
+```
+
+Notes:
+
+- An error thrown inside `events.timer` / `events.nonHttp` propagates and fails
+  the invocation — it is never converted into a `500` HTTP response.
+- `onUnhandledEvent` only governs invocations **without** a matching handler:
+  `'error'` (default) throws `UnsupportedEventError`; `'ignore'` restores the
+  historical permissive dispatch. An explicit handler always wins.
+
+| Invocation                                 | With matching `events` handler | Default (`'error'`)                        | `'ignore'`                    |
+| ------------------------------------------ | ------------------------------ | ------------------------------------------ | ----------------------------- |
+| HTTP event                                 | handled by the framework       | handled by the framework                   | handled by the framework      |
+| Timer event                                | `events.timer` (normalized)    | `UnsupportedEventError` — invocation fails | dispatched anyway (legacy)    |
+| Recognized non-HTTP event of another kind  | —                              | `UnsupportedEventError` — invocation fails | dispatched anyway (legacy)    |
+| Unrecognized event                         | `events.nonHttp` (raw)         | `UnsupportedEventError` — invocation fails | dispatched anyway (legacy)    |
 
 Failing the invocation matters: FC / SCF / Lambda only mark an invocation as
 failed when the handler throws, which is what puts it into logs, alerts and the
@@ -261,13 +328,59 @@ behaviour.
 
 What is recognized per provider:
 
-| Provider        | Recognized timer envelope                                          | Notes                                                                                                                                                    |
-| --------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Aliyun FC3      | `{triggerTime, triggerName, payload}`                              | Delivered as a Buffer; plain objects are accepted as well                                                                                                |
-| Tencent SCF     | `{Type: 'Timer', TriggerName, Time, Message}`                      | —                                                                                                                                                        |
-| Volcengine veFaaS | —                                                                | The veFaaS timer envelope is not verified yet, so it is reported as `unknown` (the invocation still fails loudly)                                        |
-| AWS             | `{version, id, 'detail-type': 'Scheduled Event', source: 'aws.events', resources: [rule ARN]}` | The rule name from `resources[0]` is reported in the error (`id` as fallback). An EventBridge **Scheduler** invoking the function with a custom input is indistinguishable from an HTTP event; it is reported as `unknown` unless it matches a known HTTP shape |
-| Cloudflare      | —                                                                  | Cron Triggers are delivered to the Worker's separate `scheduled()` export, which this adapter never sees                                                 |
+| Provider          | Recognized timer envelope                                                                      | Notes                                                                                                                                                   |
+| ----------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Aliyun FC3        | `{triggerTime, triggerName, payload}`                                                          | Delivered as a Buffer; plain objects (e.g. `si local`) are accepted as well                                                                              |
+| Tencent SCF       | `{Type: 'Timer', TriggerName, Time, Message}`                                                  | —                                                                                                                                                       |
+| Volcengine veFaaS | `{Type: 'Timer', TriggerName, Time, Message}`                                                  | The Tencent-style envelope that serverlessinsight generates; the real platform envelope is not verified yet, so anything else is reported as `unknown`   |
+| AWS               | `{version, id, 'detail-type': 'Scheduled Event', source: 'aws.events', resources: [rule ARN]}` | The rule name from `resources[0]` becomes `triggerName` (`id` as fallback) and `detail` becomes `payload`. An EventBridge **Scheduler** invoking the function with a custom input is indistinguishable from a hand-written event; it is reported as `unknown` and reaches `events.nonHttp` |
+| Cloudflare        | —                                                                                              | Cron Triggers are delivered to the Worker's separate `scheduled()` export, which this adapter never sees — see [Cloudflare boundary](#cloudflare-boundary) |
+
+### Cloudflare boundary
+
+Cloudflare Workers separates the entrypoints at the runtime level: `fetch` and
+`scheduled` are distinct exports the adapter cannot intercept. Compose them in
+the Worker entrypoint instead:
+
+```typescript
+import serverlessAdapter from '@geek-fun/serverless-adapter';
+
+const handler = serverlessAdapter(app);
+
+export default {
+  fetch: (request, env, ctx) => handler(request, ctx),
+  scheduled: (controller, env, ctx) => runTimerJob({ /* your own shape */ }),
+};
+```
+
+### Keeping your own entrypoint (manual recipe)
+
+If you prefer to classify in your own entrypoint instead of registering
+`events` handlers, the normalization is exported for reuse:
+
+```typescript
+import serverlessAdapter, { isTimerEvent, normalizeTimerEvent } from '@geek-fun/serverless-adapter';
+
+const http = serverlessAdapter(app, { provider: 'aliyun' });
+
+export const handler = async (event, context) => {
+  const timer = normalizeTimerEvent(event, 'aliyun'); // provider-scoped, or omit to try all
+
+  if (timer?.triggerName === 'billing-run') {
+    return runBillingRun(timer);
+  }
+
+  if (isTimerEvent(event)) {
+    return someOtherTimer(event); // a timer, but not one this function handles
+  }
+
+  return http(event, context);
+};
+```
+
+Classification is conservative: `http` only when the event positively matches a
+known HTTP shape, `timer` only for a positively identified timer envelope,
+everything else `unknown`. Never guess.
 
 ## Provider Detection
 
