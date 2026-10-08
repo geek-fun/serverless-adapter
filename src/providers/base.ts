@@ -8,7 +8,7 @@ import {
 } from '../types';
 import ServerlessRequest from '../serverlessRequest';
 import url from 'node:url';
-import { debug } from '../common';
+import { debug, decodeRawEvent } from '../common';
 
 export interface ProviderNormalizeResult {
   request: ServerlessRequest;
@@ -45,19 +45,10 @@ export abstract class BaseProvider implements ServerlessProvider {
    * yields `undefined` (the caller turns that into an `unknown` classification).
    */
   protected parseEventPayload(rawEvent: ProviderEvent): Record<string, unknown> | undefined {
-    try {
-      let parsed: unknown = rawEvent;
-      if (Buffer.isBuffer(rawEvent)) {
-        parsed = JSON.parse(rawEvent.toString());
-      } else if (typeof rawEvent === 'string') {
-        parsed = JSON.parse(rawEvent);
-      }
+    const parsed = decodeRawEvent(rawEvent);
 
-      if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) {
-        return parsed as Record<string, unknown>;
-      }
-    } catch {
-      // unparseable payloads are classified as `unknown` by the caller
+    if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
     }
 
     return undefined;

@@ -1,4 +1,5 @@
 import { EventKind } from './types';
+import { decodeRawEvent } from './common';
 
 /** Invocation kinds this adapter cannot answer — see issue #22. */
 export type UnsupportedEventKind = Exclude<EventKind, 'http'>;
@@ -47,23 +48,14 @@ export class UnsupportedEventError extends Error {
  * actionable without dumping the payload (which may carry user data) into logs.
  */
 export const eventKeysOf = (event: unknown): string[] => {
-  try {
-    let parsed: unknown = event;
-    if (Buffer.isBuffer(event)) {
-      parsed = JSON.parse(event.toString());
-    } else if (typeof event === 'string') {
-      parsed = JSON.parse(event);
-    }
+  const parsed = decodeRawEvent(event);
 
-    if (Array.isArray(parsed)) {
-      return ['<array>'];
-    }
+  if (Array.isArray(parsed)) {
+    return ['<array>'];
+  }
 
-    if (parsed !== null && typeof parsed === 'object') {
-      return Object.keys(parsed);
-    }
-  } catch {
-    // fall through: an undecodable payload simply has no reportable keys
+  if (parsed !== null && typeof parsed === 'object') {
+    return Object.keys(parsed);
   }
 
   return [];
