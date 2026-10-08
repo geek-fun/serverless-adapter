@@ -1,4 +1,6 @@
 import express from 'express4';
+import Koa from 'koa2';
+import { Hono } from 'hono';
 import serverlessAdapter, {
   UnsupportedEventError,
   eventKeysOf,
@@ -168,6 +170,48 @@ describe('non-HTTP invocations (issue #22)', () => {
       expect(result.statusCode).toBe(200);
       expect(root).toHaveBeenCalledTimes(1);
     });
+  });
+  describe('classification is framework independent', () => {
+    const frameworks: Array<[string, () => unknown]> = [
+      [
+        'express',
+        () => {
+          const app = express();
+          app.get('/', (_req, res) => res.json({ page: 'spa' }));
+          return app;
+        },
+      ],
+      [
+        'koa',
+        () => {
+          const app = new Koa();
+          app.use((ctx) => {
+            ctx.body = 'ok';
+          });
+          return app;
+        },
+      ],
+      [
+        'hono',
+        () => {
+          const app = new Hono();
+          app.get('/', (c) => c.json({ page: 'spa' }));
+          return app;
+        },
+      ],
+    ];
+
+    for (const [name, createApp] of frameworks) {
+      it(`should reject a timer invocation before a ${name} app runs`, async () => {
+        const handler = serverlessAdapter(createApp() as Parameters<typeof serverlessAdapter>[0], {
+          provider: 'aliyun',
+        });
+
+        const error = await captureError(handler(aliyunTimerEvent, defaultContext));
+
+        expect(error).toBeInstanceOf(UnsupportedEventError);
+      });
+    }
   });
 });
 
