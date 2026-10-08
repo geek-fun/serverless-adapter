@@ -30,10 +30,11 @@ export class AWSProvider extends BaseProvider {
     }
 
     if (raw['detail-type'] === 'Scheduled Event' && raw.source === 'aws.events') {
-      return typeof raw.id === 'string' ? { kind: 'timer', detail: raw.id } : { kind: 'timer' };
+      const detail = scheduledRuleDetail(raw);
+      return detail !== undefined ? { kind: 'timer', detail } : { kind: 'timer' };
     }
 
-    if (isV2Event(raw) || isV1Event(raw) || isLoadBalancerEvent(raw)) {
+    if (isV2Event(raw) || isV1Event(raw)) {
       return { kind: 'http' };
     }
 
@@ -99,20 +100,29 @@ function isV2Event(event: Record<string, unknown>): boolean {
   return event.version === '2.0';
 }
 
-/** REST API v1 (also used by ALB / VPC Lattice): path + httpMethod are always present. */
+/**
+ * REST API v1 and ALB target events — both always carry `path` + `httpMethod`.
+ * (VPC Lattice events are v2-shaped and match `isV2Event` instead.)
+ */
 function isV1Event(event: Record<string, unknown>): boolean {
   return typeof event.path === 'string' && typeof event.httpMethod === 'string';
 }
 
-function isLoadBalancerEvent(event: Record<string, unknown>): boolean {
-  const requestContext = event.requestContext;
-  return (
-    typeof event.httpMethod === 'string' &&
-    requestContext !== null &&
-    typeof requestContext === 'object' &&
-    !Array.isArray(requestContext) &&
-    'elb' in requestContext
-  );
+/**
+ * A stable identifier for a `Scheduled Event` envelope: the rule name from
+ * `resources[0]` (`arn:aws:events:…:rule/<name>`) when present, falling back to
+ * the per-invocation `id` UUID.
+ */
+function scheduledRuleDetail(event: Record<string, unknown>): string | undefined {
+  const [resource] = Array.isArray(event.resources) ? event.resources : [];
+  if (typeof resource === 'string') {
+    const ruleName = resource.split('rule/').pop();
+    if (ruleName) {
+      return ruleName;
+    }
+  }
+
+  return typeof event.id === 'string' ? event.id : undefined;
 }
 
 function extractMethodFromRouteKey(routeKey: string): string {

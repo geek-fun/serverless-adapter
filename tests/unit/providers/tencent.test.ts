@@ -460,5 +460,11 @@ describe('TencentProvider', () => {
       expect(provider.classifyEvent(unknownEvent)).toEqual({ kind: 'unknown' });
       expect(provider.classifyEvent(Buffer.from('not json'))).toEqual({ kind: 'unknown' });
     });
+
+    it('should not treat a bare top-level method field as an HTTP marker', () => {
+      const queueMessage = Buffer.from(JSON.stringify({ method: 'process', data: 'x' }));
+
+      expect(provider.classifyEvent(queueMessage)).toEqual({ kind: 'unknown' });
+    });
   });
 });

@@ -85,7 +85,7 @@ describe('non-HTTP invocations (issue #22)', () => {
     expect(error).toBeInstanceOf(UnsupportedEventError);
     expect(error.provider).toBe('aws');
     expect(error.kind).toBe('timer');
-    expect(error.detail).toBe('6c2b1b0a-0000-0000-0000-000000000001');
+    expect(error.detail).toBe('billing-run');
   });
 
   it('should reject events that match no known envelope as unknown', async () => {

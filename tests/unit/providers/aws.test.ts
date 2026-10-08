@@ -604,18 +604,29 @@ describe('AWSProvider', () => {
       expect(provider.classifyEvent(albEvent as unknown as Buffer)).toEqual({ kind: 'http' });
     });
 
-    it('should classify an EventBridge scheduled rule as timer', () => {
+    it('should classify an EventBridge scheduled rule as timer and report the rule name', () => {
       expect(provider.classifyEvent(awsScheduledEvent as unknown as Buffer)).toEqual({
+        kind: 'timer',
+        detail: 'billing-run',
+      });
+    });
+
+    it('should fall back to the id when the scheduled event has no rule resource', () => {
+      const withoutResources: Record<string, unknown> = { ...awsScheduledEvent };
+      delete withoutResources['resources'];
+
+      expect(provider.classifyEvent(withoutResources as unknown as Buffer)).toEqual({
         kind: 'timer',
         detail: '6c2b1b0a-0000-0000-0000-000000000001',
       });
     });
 
-    it('should classify a scheduled event without an id as timer', () => {
-      const withoutId: Record<string, unknown> = { ...awsScheduledEvent };
-      delete withoutId['id'];
+    it('should classify a scheduled event without resources or id as timer', () => {
+      const bare: Record<string, unknown> = { ...awsScheduledEvent };
+      delete bare['resources'];
+      delete bare['id'];
 
-      expect(provider.classifyEvent(withoutId as unknown as Buffer)).toEqual({ kind: 'timer' });
+      expect(provider.classifyEvent(bare as unknown as Buffer)).toEqual({ kind: 'timer' });
     });
 
     it('should classify queue and unrecognized payloads as unknown', () => {

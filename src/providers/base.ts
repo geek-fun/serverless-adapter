@@ -58,13 +58,18 @@ export abstract class BaseProvider implements ServerlessProvider {
    * Positive HTTP markers shared by the API-Gateway style providers. A scheduled
    * or queue event carries none of these fields, so it is never mistaken for an
    * HTTP request.
+   *
+   * `method` is deliberately NOT a marker: it is generic enough to appear in
+   * business payloads (a queue message like `{method: 'process'}` would be
+   * silently dispatched into the app — exactly bug #22). Providers whose HTTP
+   * dialect really only has `method` (veFaaS) pair it with `path` in their own
+   * classifyEvent instead.
    */
   protected looksLikeHttpEvent(raw: Record<string, unknown>): boolean {
     return (
       typeof raw.path === 'string' ||
       typeof raw.rawPath === 'string' ||
-      typeof raw.httpMethod === 'string' ||
-      typeof raw.method === 'string'
+      typeof raw.httpMethod === 'string'
     );
   }
 
