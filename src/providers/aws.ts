@@ -23,7 +23,8 @@ export class AWSProvider extends BaseProvider {
    * API Gateway shapes can be answered; an EventBridge **Scheduler** invoking the
    * function with a custom input is indistinguishable from a hand-written HTTP
    * event, so only the documented `Scheduled Event` envelope is recognized as a
-   * timer (see issue #23).
+   * timer (see issue #23). Its markers live in `normalizeTimerEvent` (single
+   * source of truth) and are reused here.
    */
   classifyEvent(rawEvent: ProviderEvent): EventClassification {
     const raw = this.parseEventPayload(rawEvent);
@@ -31,9 +32,11 @@ export class AWSProvider extends BaseProvider {
       return { kind: 'unknown' };
     }
 
-    if (raw['detail-type'] === 'Scheduled Event' && raw.source === 'aws.events') {
-      const detail = scheduledRuleDetail(raw);
-      return detail !== undefined ? { kind: 'timer', detail } : { kind: 'timer' };
+    const timer = this.normalizeTimerEvent(rawEvent);
+    if (timer) {
+      return timer.triggerName !== undefined
+        ? { kind: 'timer', detail: timer.triggerName }
+        : { kind: 'timer' };
     }
 
     if (isV2Event(raw) || isV1Event(raw)) {

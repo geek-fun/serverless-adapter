@@ -42,6 +42,7 @@ export class TencentProvider extends BaseProvider {
    *
    * Only positive HTTP markers count here — `isFunctionUrlEvent` is a dialect
    * discriminator (negative exclusion) and would happily claim a timer event.
+   * The timer marker lives in `normalizeTimerEvent` (single source of truth).
    */
   classifyEvent(rawEvent: ProviderEvent): EventClassification {
     const raw = this.parseEventPayload(rawEvent);
@@ -49,9 +50,10 @@ export class TencentProvider extends BaseProvider {
       return { kind: 'unknown' };
     }
 
-    if (raw.Type === 'Timer') {
-      return typeof raw.TriggerName === 'string'
-        ? { kind: 'timer', detail: raw.TriggerName }
+    const timer = this.normalizeTimerEvent(rawEvent);
+    if (timer) {
+      return timer.triggerName !== undefined
+        ? { kind: 'timer', detail: timer.triggerName }
         : { kind: 'timer' };
     }
 

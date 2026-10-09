@@ -20,6 +20,9 @@ export class AliyunProvider extends BaseProvider {
    * request apart from a time trigger (a `{triggerTime, triggerName, payload}`
    * event — the docs list it under "Time triggers").
    *
+   * The timer markers live in `normalizeTimerEvent` (single source of truth);
+   * this only turns them into a classification.
+   *
    * @see https://www.alibabacloud.com/help/en/functioncompute/formats-of-event-for-different-triggers-1
    */
   classifyEvent(rawEvent: ProviderEvent): EventClassification {
@@ -32,11 +35,8 @@ export class AliyunProvider extends BaseProvider {
       return { kind: 'http' };
     }
 
-    if (typeof raw.triggerName === 'string') {
-      return { kind: 'timer', detail: raw.triggerName };
-    }
-
-    return { kind: 'unknown' };
+    const timer = this.normalizeTimerEvent(rawEvent);
+    return timer ? { kind: 'timer', detail: timer.triggerName } : { kind: 'unknown' };
   }
 
   /**
@@ -44,7 +44,7 @@ export class AliyunProvider extends BaseProvider {
    * as a Buffer, but plain objects are accepted as well). Positive markers only:
    * an HTTP-shaped event is never claimed as a timer (issue #23).
    */
-  normalizeTimerEvent(rawEvent: ProviderEvent): TimerEvent | null {
+  normalizeTimerEvent(rawEvent: ProviderEvent): (TimerEvent & { triggerName: string }) | null {
     const raw = this.parseEventPayload(rawEvent);
     if (!raw || this.looksLikeHttpEvent(raw) || typeof raw.triggerName !== 'string') {
       return null;
