@@ -9,7 +9,10 @@ import serverlessAdapter, {
 import { defaultContext } from '../fixtures/fcContext';
 import { createAwsContext } from '../fixtures/awsContext';
 import { createTencentContext, createTencentFunctionUrlEvent } from '../fixtures/tencentContext';
-import { createVolcengineContext, createVolcengineEvent } from '../fixtures/volcengineContext';
+import {
+  createVolcengineContext,
+  createDocumentedVolcengineEvent,
+} from '../fixtures/volcengineContext';
 import {
   aliyunTimerEvent,
   awsScheduledEvent,
@@ -78,10 +81,11 @@ const providerKits: Record<string, ProviderKit> = {
     context: createTencentContext(),
   },
   volcengine: {
-    httpEvent: Buffer.from(JSON.stringify(createVolcengineEvent())),
+    // The documented API-Gateway trigger structure (httpMethod / queryStringParameters).
+    httpEvent: Buffer.from(JSON.stringify(createDocumentedVolcengineEvent())),
     timerEvent: volcengineTimerEvent,
     timerProvider: 'volcengine',
-    timerName: 'billing-run',
+    timerName: '4o3fw1qf****', // the timer id from the CloudEvents `source`
     context: createVolcengineContext(),
   },
   aws: {
