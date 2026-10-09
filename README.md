@@ -193,9 +193,10 @@ positional form is the canonical shape for HTTP-only apps.
 
 #### Returns
 
-A function that handles serverless events:
+A function that handles serverless events. Its result type follows the form:
 
 ```typescript
+// HTTP-only forms (positional app, no `events` handlers): the HTTP envelope
 (event: Buffer, context: ProviderContext) =>
   Promise<{
     statusCode: number;
@@ -203,11 +204,18 @@ A function that handles serverless events:
     headers: Record<string, string>;
     isBase64Encoded: boolean;
   }>;
+
+// Any form with `events` handlers: the invocation may be a timer / queue event,
+// so the result is whatever that handler returned — `ServerlessHandler<unknown>`
+(event: Buffer, context: ProviderContext) => Promise<unknown>;
 ```
 
-HTTP invocations return this shape; the result of a timer / non-HTTP invocation
+HTTP invocations return the envelope; the result of a timer / non-HTTP invocation
 is whatever the corresponding `events` handler returned, passed through
-verbatim.
+verbatim. The types mirror that exactly: once `events` handlers are configured the
+handler is typed `ServerlessHandler<unknown>`, so the compiler does not pretend a
+timer result is an HTTP envelope. `ServerlessHandler<Result>` and
+`ServerlessHandlerResult` are exported for annotating your own code.
 
 ### `serverlessAdapter({ provider, events: { http, timer } })` (symmetric form)
 
@@ -364,13 +372,15 @@ import serverlessAdapter, { isTimerEvent, normalizeTimerEvent } from '@geek-fun/
 const http = serverlessAdapter(app, { provider: 'aliyun' });
 
 export const handler = async (event, context) => {
-  const timer = normalizeTimerEvent(event, 'aliyun'); // provider-scoped, or omit to try all
+  // Pass the provider your deployment targets: without it, both helpers scan
+  // every provider's markers and attribute the event to the first match.
+  const timer = normalizeTimerEvent(event, 'aliyun');
 
   if (timer?.triggerName === 'billing-run') {
     return runBillingRun(timer);
   }
 
-  if (isTimerEvent(event)) {
+  if (isTimerEvent(event, 'aliyun')) {
     return someOtherTimer(event); // a timer, but not one this function handles
   }
 
