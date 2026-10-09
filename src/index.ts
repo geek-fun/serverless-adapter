@@ -1,4 +1,3 @@
-import { IncomingHttpHeaders } from 'http';
 import { constructFramework } from './framework';
 import { waitForStreamComplete, buildResponse } from './transport';
 import { detectProvider, getProvider } from './providers';
@@ -11,6 +10,7 @@ import {
   FrameworkApp,
   ProviderEvent,
   ProviderContext,
+  ServerlessHandler,
   ServerlessResponse,
   TimerEvent,
 } from './types';
@@ -37,7 +37,8 @@ export interface ServerlessAdapterOptions {
    * - `'error'` (default): throw an `UnsupportedEventError`, so FC / SCF / Lambda
    *   record a failed invocation — visible in logs and alerts, and retried by the
    *   platform's own retry policy.
-   * - `'ignore'`: skip classification and dispatch anyway, i.e. the historical
+   * - `'ignore'`: do not enforce the classification — an invocation without a
+   *   matching handler is dispatched to the framework anyway, i.e. the historical
    *   permissive behaviour. Deprecation escape hatch; prefer handling non-HTTP
    *   triggers in your own entrypoint. Explicit `events` handlers still win.
    */
@@ -56,16 +57,6 @@ export interface ServerlessAdapterEventOptions {
   events: EventHandlersWithHttp;
   onUnhandledEvent?: 'error' | 'ignore';
 }
-
-type HandlerResult = {
-  statusCode: number;
-  body: string;
-  headers: IncomingHttpHeaders;
-  isBase64Encoded: boolean;
-  multiValueHeaders?: { [key: string]: string[] };
-};
-
-type Handler = (event: ProviderEvent, context: ProviderContext) => Promise<HandlerResult>;
 
 /**
  * An Express app is a function, Koa exposes `.callback`, Hono exposes `.fetch` —
@@ -96,12 +87,28 @@ const isEventOptions = (
   );
 };
 
-function serverlessAdapter(app: FrameworkApp, options?: ServerlessAdapterOptions): Handler;
-function serverlessAdapter(options: ServerlessAdapterEventOptions): Handler;
+/** An options object (as opposed to a framework app) — `{ provider, … }`. */
+const isPlainOptionsObject = (candidate: unknown): candidate is Record<string, unknown> =>
+  candidate !== null && typeof candidate === 'object' && !isFrameworkApp(candidate);
+
+/**
+ * HTTP-only apps keep the HTTP envelope as their result; as soon as `events`
+ * handlers are configured the invocation may be a timer / queue event, whose
+ * result is whatever that handler returned (see `ServerlessHandler<Result>`).
+ */
+function serverlessAdapter(
+  app: FrameworkApp,
+  options?: ServerlessAdapterOptions & { events?: undefined },
+): ServerlessHandler;
+function serverlessAdapter(
+  app: FrameworkApp,
+  options: ServerlessAdapterOptions,
+): ServerlessHandler<unknown>;
+function serverlessAdapter(options: ServerlessAdapterEventOptions): ServerlessHandler<unknown>;
 function serverlessAdapter(
   appOrOptions: FrameworkApp | ServerlessAdapterEventOptions,
   options?: ServerlessAdapterOptions,
-): Handler {
+): ServerlessHandler<unknown> {
   let app: FrameworkApp;
   let adapterOptions: ServerlessAdapterOptions;
 
@@ -117,8 +124,22 @@ function serverlessAdapter(
       );
     }
   } else if (isEventOptions(appOrOptions) && isFrameworkApp(appOrOptions.events?.http)) {
+    if (options !== undefined) {
+      throw new Error(
+        'serverlessAdapter received the symmetric options object together with a second ' +
+          'argument. Pass provider / onUnhandledEvent inside that object: ' +
+          'serverlessAdapter({ provider, events: { http, timer } }).',
+      );
+    }
+
     app = appOrOptions.events.http as FrameworkApp;
     adapterOptions = appOrOptions;
+  } else if (isPlainOptionsObject(appOrOptions)) {
+    throw new Error(
+      'serverlessAdapter received an options object without a web framework app in events.http. ' +
+        'The symmetric form requires one — serverlessAdapter({ provider, events: { http, timer } }) — ' +
+        'while an HTTP-only app uses the positional form serverlessAdapter(app, { provider }).',
+    );
   } else {
     throw new Error(
       'serverlessAdapter expected a web framework app (Express, Koa or Hono) as first ' +
@@ -129,7 +150,7 @@ function serverlessAdapter(
   const events = adapterOptions.events;
   const serverlessFramework = constructFramework(app);
 
-  return async (event: ProviderEvent, context: ProviderContext): Promise<HandlerResult> => {
+  return async (event: ProviderEvent, context: ProviderContext): Promise<unknown> => {
     debug(`serverlessAdapter receive event: ${JSON.stringify({ event, context })}`);
 
     const provider = adapterOptions.provider
@@ -156,13 +177,14 @@ function serverlessAdapter(
         };
         debug(`serverlessAdapter: dispatching timer "${timerEvent.triggerName}" to events.timer`);
 
-        return (await events.timer(timerEvent, context)) as HandlerResult;
+        // Verbatim: no HTTP envelope is wrapped around a timer result.
+        return events.timer(timerEvent, context);
       }
 
       if (classification.kind === 'unknown' && events?.nonHttp) {
         debug(`serverlessAdapter: dispatching unrecognized invocation to events.nonHttp`);
 
-        return (await events.nonHttp(event, context)) as HandlerResult;
+        return events.nonHttp(event, context);
       }
 
       if (adapterOptions.onUnhandledEvent !== 'ignore') {
@@ -189,11 +211,8 @@ function serverlessAdapter(
       await waitForStreamComplete(response);
 
       const builtResponse = buildResponse({ request, response });
-      const formattedResponse = provider.formatResponse(
-        builtResponse as ServerlessResponse,
-      ) as HandlerResult;
 
-      return formattedResponse;
+      return provider.formatResponse(builtResponse as ServerlessResponse);
     } catch (err) {
       return {
         statusCode: 500,
