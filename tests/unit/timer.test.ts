@@ -6,6 +6,7 @@ import {
   awsSchedulerCustomInputEvent,
   tencentTimerEvent,
   unknownEvent,
+  volcengineSiLocalTimerEvent,
   volcengineTimerEvent,
 } from '../fixtures/timerContext';
 
@@ -141,20 +142,47 @@ describe('normalizeTimerEvent (issue #23)', () => {
   });
 
   describe('volcengine', () => {
-    it('should normalize the Tencent-style envelope si generates for veFaaS', () => {
+    it('should normalize the documented CloudEvents timer envelope', () => {
       expect(normalizeTimerEvent(volcengineTimerEvent, 'volcengine')).toEqual({
         provider: 'volcengine',
-        triggerName: 'billing-run',
-        triggerTime: '2026-10-01T03:23:00Z',
+        triggerName: '4o3fw1qf****', // the timer id from `source`
+        triggerTime: '2022-11-22T04:28:07.945838513Z',
         payload: { job: 'billing-run' },
         raw: volcengineTimerEvent,
       });
     });
 
-    it('should not claim HTTP-shaped events', () => {
+    it('should normalize a CloudEvents timer without source or data', () => {
+      const minimal = Buffer.from(JSON.stringify({ type: 'faas.timer.event' }));
+
+      expect(normalizeTimerEvent(minimal, 'volcengine')).toEqual({
+        provider: 'volcengine',
+        raw: minimal,
+      });
+    });
+
+    it('should keep the SCF-style envelope of `si local` working', () => {
+      expect(normalizeTimerEvent(volcengineSiLocalTimerEvent, 'volcengine')).toEqual({
+        provider: 'volcengine',
+        triggerName: 'billing-run',
+        triggerTime: '2026-10-01T03:23:00Z',
+        payload: { job: 'billing-run' },
+        raw: volcengineSiLocalTimerEvent,
+      });
+    });
+
+    it('should not claim HTTP-shaped events, nor other CloudEvents kinds', () => {
       const httpEvent = Buffer.from(JSON.stringify({ path: '/', method: 'GET' }));
+      const documentedHttpEvent = Buffer.from(
+        JSON.stringify({ path: '/', httpMethod: 'GET', queryStringParameters: {} }),
+      );
+      const tosEvent = Buffer.from(
+        JSON.stringify({ type: 'faas.tos.event', source: '/faas/event/tos/bucket' }),
+      );
 
       expect(normalizeTimerEvent(httpEvent, 'volcengine')).toBeNull();
+      expect(normalizeTimerEvent(documentedHttpEvent, 'volcengine')).toBeNull();
+      expect(normalizeTimerEvent(tosEvent, 'volcengine')).toBeNull();
     });
   });
 

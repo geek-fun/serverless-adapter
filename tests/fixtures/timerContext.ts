@@ -44,10 +44,29 @@ export const awsScheduledEvent = {
 };
 
 /**
- * Volcengine veFaaS timer, as serverlessinsight generates it: the Tencent-shape
- * `{Type: 'Timer', …}` envelope (the real platform envelope is not verified yet).
+ * Volcengine veFaaS Timer trigger, as the platform documents it: a CloudEvents
+ * envelope with `type: 'faas.timer.event'`, the timer id in `source` and the
+ * configured trigger message in `data`.
+ *
+ * @see https://www.volcengine.com/docs/6662/116914
  */
 export const volcengineTimerEvent = Buffer.from(
+  JSON.stringify({
+    id: '9cab1030-dccf-4b61-ae07-542bffef****',
+    source: '/faas/event/timer/4o3fw1qf****',
+    specversion: '1.0',
+    time: '2022-11-22T04:28:07.945838513Z',
+    type: 'faas.timer.event',
+    datacontenttype: 'application/octet-stream',
+    data: '{"job":"billing-run"}',
+  }),
+);
+
+/**
+ * The SCF-style envelope `serverlessinsight`'s local runner emits for veFaaS
+ * timers (`si local`), kept as a fixture so that path stays covered.
+ */
+export const volcengineSiLocalTimerEvent = Buffer.from(
   JSON.stringify({
     Type: 'Timer',
     TriggerName: 'billing-run',

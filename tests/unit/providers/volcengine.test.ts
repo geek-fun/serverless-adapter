@@ -1,7 +1,15 @@
 import { VolcengineProvider } from '../../../src/providers/volcengine';
 import { VolcengineApiGatewayEvent, VolcengineVefaasContext } from '../../../src/types/volcengine';
-import { createVolcengineEvent, createVolcengineContext } from '../../fixtures/volcengineContext';
-import { tencentTimerEvent, unknownEvent } from '../../fixtures/timerContext';
+import {
+  createDocumentedVolcengineEvent,
+  createVolcengineEvent,
+  createVolcengineContext,
+} from '../../fixtures/volcengineContext';
+import {
+  unknownEvent,
+  volcengineSiLocalTimerEvent,
+  volcengineTimerEvent,
+} from '../../fixtures/timerContext';
 
 describe('VolcengineProvider', () => {
   let provider: VolcengineProvider;
@@ -17,6 +25,53 @@ describe('VolcengineProvider', () => {
   });
 
   describe('normalizeEvent', () => {
+    it('should normalize the documented API Gateway event structure', () => {
+      const rawEvent = Buffer.from(JSON.stringify(createDocumentedVolcengineEvent()));
+
+      const result = provider.normalizeEvent(rawEvent);
+
+      expect(result.path).toBe('/api/test');
+      expect(result.httpMethod).toBe('GET');
+      expect(result.queryParameters).toEqual({ foo: 'bar' });
+      expect(result.pathParameters).toEqual({ path: 'value' });
+      expect(result.headers).toEqual({
+        Host: '10.243.0.1:9001',
+        'User-Agent': 'curl/7.79.1',
+        'X-Faas-Request-Id': 'b7e5ac05-cf6a-466a-86d4-093b24c3****',
+      });
+      expect(result.body).toBe('{"hello": "veFaaS"}');
+      expect(result.isBase64Encoded).toBe(false);
+    });
+
+    it('should still normalize the legacy method/query spelling', () => {
+      const rawEvent = Buffer.from(
+        JSON.stringify(createVolcengineEvent({ method: 'PUT', query: { page: '2' } })),
+      );
+
+      const result = provider.normalizeEvent(rawEvent);
+
+      expect(result.httpMethod).toBe('PUT');
+      expect(result.queryParameters).toEqual({ page: '2' });
+    });
+
+    it('should prefer the documented fields when both spellings are present', () => {
+      const rawEvent = Buffer.from(
+        JSON.stringify(
+          createDocumentedVolcengineEvent({
+            httpMethod: 'POST',
+            method: 'GET',
+            queryStringParameters: { documented: '1' },
+            query: { legacy: '1' },
+          }),
+        ),
+      );
+
+      const result = provider.normalizeEvent(rawEvent);
+
+      expect(result.httpMethod).toBe('POST');
+      expect(result.queryParameters).toEqual({ documented: '1' });
+    });
+
     it('should normalize API Gateway event to ServerlessEvent', () => {
       const volcengineEvent: VolcengineApiGatewayEvent = {
         path: '/api/users',
@@ -346,16 +401,27 @@ describe('VolcengineProvider', () => {
   });
 
   describe('classifyEvent', () => {
-    it('should classify an API Gateway event as http', () => {
+    it('should classify the documented API Gateway event as http', () => {
+      const rawEvent = Buffer.from(JSON.stringify(createDocumentedVolcengineEvent()));
+
+      expect(provider.classifyEvent(rawEvent)).toEqual({ kind: 'http' });
+    });
+
+    it('should still classify the legacy method/query event as http', () => {
       const rawEvent = Buffer.from(JSON.stringify(createVolcengineEvent()));
 
       expect(provider.classifyEvent(rawEvent)).toEqual({ kind: 'http' });
     });
 
-    it('should classify a Tencent-style timer envelope as timer', () => {
-      // si generates the Tencent-shape envelope for veFaaS timers; the positive
-      // `Type: 'Timer'` marker is recognized (issue #23).
-      expect(provider.classifyEvent(tencentTimerEvent)).toEqual({
+    it('should classify the documented CloudEvents timer envelope as timer', () => {
+      expect(provider.classifyEvent(volcengineTimerEvent)).toEqual({
+        kind: 'timer',
+        detail: '4o3fw1qf****', // the timer id from `source`
+      });
+    });
+
+    it('should classify the si local (SCF-style) timer envelope as timer', () => {
+      expect(provider.classifyEvent(volcengineSiLocalTimerEvent)).toEqual({
         kind: 'timer',
         detail: 'billing-run',
       });
@@ -367,6 +433,18 @@ describe('VolcengineProvider', () => {
       });
     });
 
+    it('should classify other CloudEvents kinds as unknown, not timer', () => {
+      const tosEvent = Buffer.from(
+        JSON.stringify({ type: 'faas.tos.event', source: '/faas/event/tos/bucket' }),
+      );
+      const mqEvent = Buffer.from(
+        JSON.stringify({ type: 'faas.kafka.event', source: '/faas/event/kafka/xyz' }),
+      );
+
+      expect(provider.classifyEvent(tosEvent)).toEqual({ kind: 'unknown' });
+      expect(provider.classifyEvent(mqEvent)).toEqual({ kind: 'unknown' });
+    });
+
     it('should classify unrecognized payloads as unknown', () => {
       expect(provider.classifyEvent(unknownEvent)).toEqual({ kind: 'unknown' });
       expect(provider.classifyEvent(Buffer.from('not json'))).toEqual({ kind: 'unknown' });
@@ -374,22 +452,23 @@ describe('VolcengineProvider', () => {
   });
 
   describe('normalizeTimerEvent', () => {
-    it('should normalize the Tencent-style timer envelope', () => {
-      const rawEvent = Buffer.from(
-        JSON.stringify({
-          Type: 'Timer',
-          TriggerName: 'billing-run',
-          Time: '2026-10-01T03:23:00Z',
-          Message: '{"job":"billing-run"}',
-        }),
-      );
+    it('should normalize the documented CloudEvents timer envelope', () => {
+      expect(provider.normalizeTimerEvent(volcengineTimerEvent)).toEqual({
+        provider: 'volcengine',
+        triggerName: '4o3fw1qf****',
+        triggerTime: '2022-11-22T04:28:07.945838513Z',
+        payload: { job: 'billing-run' },
+        raw: volcengineTimerEvent,
+      });
+    });
 
-      expect(provider.normalizeTimerEvent(rawEvent)).toEqual({
+    it('should keep the si local (SCF-style) timer envelope working', () => {
+      expect(provider.normalizeTimerEvent(volcengineSiLocalTimerEvent)).toEqual({
         provider: 'volcengine',
         triggerName: 'billing-run',
         triggerTime: '2026-10-01T03:23:00Z',
         payload: { job: 'billing-run' },
-        raw: rawEvent,
+        raw: volcengineSiLocalTimerEvent,
       });
     });
 

@@ -16,6 +16,7 @@ import {
   VolcengineVefaasResponse,
   VolcengineEvent,
   VolcengineHandler,
+  VolcengineTimerEvent,
 } from './volcengine';
 import {
   AwsApiGatewayV1Event,
@@ -42,6 +43,7 @@ export {
   VolcengineVefaasResponse,
   VolcengineEvent,
   VolcengineHandler,
+  VolcengineTimerEvent,
 };
 export {
   AwsApiGatewayV1Event,
