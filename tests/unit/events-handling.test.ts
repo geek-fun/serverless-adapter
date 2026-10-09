@@ -437,6 +437,19 @@ describe('symmetric entrypoint form (issue #23)', () => {
     );
   });
 
+  it('rejects a second argument passed alongside the symmetric form', () => {
+    const { app } = expressApp();
+
+    expect(() =>
+      serverlessAdapter(
+        { provider: 'aliyun', events: { http: app } } as never,
+        {
+          provider: 'aws',
+        } as never,
+      ),
+    ).toThrow(/together with a second argument/);
+  });
+
   it('still accepts the positional app with only timer/nonHttp handlers', async () => {
     const { app, root } = expressApp();
     const timer = jest.fn().mockResolvedValue('timer-ok');

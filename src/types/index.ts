@@ -86,6 +86,23 @@ export type ServerlessResponse = {
 };
 
 /**
+ * What an HTTP invocation answers with: the API-Gateway style response envelope.
+ */
+export type ServerlessHandlerResult = ServerlessResponse;
+
+/**
+ * The handler the adapter returns.
+ *
+ * `Result` is `ServerlessHandlerResult` for HTTP-only apps, and `unknown` once
+ * `events` handlers are configured: a timer / queue invocation has no HTTP
+ * response contract, so the handler's return value is passed through verbatim.
+ */
+export type ServerlessHandler<Result = ServerlessHandlerResult> = (
+  event: ProviderEvent,
+  context: ProviderContext,
+) => Promise<Result>;
+
+/**
  * What kind of invocation the provider received.
  *
  * `http` is the only kind this adapter can answer: API Gateway / Function URL /
@@ -187,13 +204,9 @@ export type ProviderEvent =
   | AwsEvent
   | CloudflareEvent;
 
-export type ServerlessAdapter = (app: Express | Application | HonoApp) => (
-  event: Event,
-  context: Context,
-) => Promise<{
-  statusCode: number;
-  body: string;
-  headers: IncomingHttpHeaders;
-  isBase64Encoded: boolean;
-  multiValueHeaders?: { [key: string]: string[] };
-}>;
+/**
+ * @deprecated Describes only the positional, HTTP-only form. Use the overloads of
+ * `serverlessAdapter` (or `ServerlessHandler<Result>` directly) — this alias
+ * predates the symmetric entrypoint form and the non-HTTP `events` handlers.
+ */
+export type ServerlessAdapter = (app: Express | Application | HonoApp) => ServerlessHandler;
