@@ -19,8 +19,9 @@ export class VolcengineProvider extends BaseProvider {
    *
    * Timer invocations are recognized by the positive `Type: 'Timer'` marker of
    * the Tencent-style envelope that serverlessinsight generates for veFaaS
-   * timers; the real platform envelope is not verified yet, so anything else is
-   * reported as `unknown` rather than guessed into the HTTP path (issue #23).
+   * timers (that marker lives in `normalizeTimerEvent`); the real platform
+   * envelope is not verified yet, so anything else is reported as `unknown`
+   * rather than guessed into the HTTP path (issue #23).
    */
   classifyEvent(rawEvent: ProviderEvent): EventClassification {
     const raw = this.parseEventPayload(rawEvent);
@@ -32,9 +33,10 @@ export class VolcengineProvider extends BaseProvider {
       return { kind: 'http' };
     }
 
-    if (raw.Type === 'Timer') {
-      return typeof raw.TriggerName === 'string'
-        ? { kind: 'timer', detail: raw.TriggerName }
+    const timer = this.normalizeTimerEvent(rawEvent);
+    if (timer) {
+      return timer.triggerName !== undefined
+        ? { kind: 'timer', detail: timer.triggerName }
         : { kind: 'timer' };
     }
 
