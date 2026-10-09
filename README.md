@@ -340,9 +340,17 @@ What is recognized per provider:
 | ----------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Aliyun FC3        | `{triggerTime, triggerName, payload}`                                                          | Delivered as a Buffer; plain objects (e.g. `si local`) are accepted as well                                                                              |
 | Tencent SCF       | `{Type: 'Timer', TriggerName, Time, Message}`                                                  | —                                                                                                                                                       |
-| Volcengine veFaaS | `{Type: 'Timer', TriggerName, Time, Message}`                                                  | The Tencent-style envelope that serverlessinsight generates; the real platform envelope is not verified yet, so anything else is reported as `unknown`   |
+| Volcengine veFaaS | CloudEvents `{id, source: '/faas/event/timer/{timer_id}', type: 'faas.timer.event', time, data}` | `triggerName` is the timer id parsed from `source` (the event carries no trigger name), `triggerTime` is `time` and `payload` is `data`. The SCF-style envelope that `si local` emits is still accepted. TOS / MQ / TLS CloudEvents are `unknown` and reach `events.nonHttp` |
 | AWS               | `{version, id, 'detail-type': 'Scheduled Event', source: 'aws.events', resources: [rule ARN]}` | The rule name from `resources[0]` becomes `triggerName` (`id` as fallback) and `detail` becomes `payload`. An EventBridge **Scheduler** invoking the function with a custom input is indistinguishable from a hand-written event; it is reported as `unknown` and reaches `events.nonHttp` |
 | Cloudflare        | —                                                                                              | Cron Triggers are delivered to the Worker's separate `scheduled()` export, which this adapter never sees — see [Cloudflare boundary](#cloudflare-boundary) |
+
+What is recognized as an HTTP event, per provider:
+
+| Provider          | HTTP fields                                                                              |
+| ----------------- | ---------------------------------------------------------------------------------------- |
+| Aliyun FC3 / AWS  | API Gateway shapes: `path` / `rawPath` / `httpMethod` (v1), `version: '2.0'` + `rawPath` (v2), ALB (`requestContext.elb` + `httpMethod`) |
+| Tencent SCF       | Function URL (`httpMethod`, `path` optional) and the legacy API Gateway shape (`queryStringParameters` / `requestContext`) |
+| Volcengine veFaaS | Documented API Gateway structure: `path` + `httpMethod` + `queryStringParameters` + `pathParameters`; the legacy `method` / `query` spelling is still accepted |
 
 ### Cloudflare boundary
 
