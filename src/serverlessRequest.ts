@@ -58,6 +58,15 @@ export default class ServerlessRequest extends IncomingMessage {
       headers: combinedHeaders,
     });
 
+    // The adapter delivers the entire request body at construction time and
+    // terminates the stream afterwards — semantically the message is complete.
+    // IncomingMessage.complete stays false unless the node http parser sets
+    // it, and _destroy() then emits 'aborted' for every destroy, which
+    // stream consumers like formidable re-raise as FormidableError 1002
+    // "Request aborted" (multipart uploads on aliyun/vefaaS transports died
+    // on exactly this). Claim completeness true here.
+    this.complete = true;
+
     this.body = request.body;
     this.ip = request.remoteAddress;
     this.isBase64Encoded = request.isBase64Encoded;
