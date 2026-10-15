@@ -1,3 +1,9 @@
+<div align="center">
+
+<img src="docs/brand/brand.jpg" alt="ServerlessInsight" width="360" />
+
+</div>
+
 # Serverless-Adapter
 
 [![Node.js CI](https://github.com/geek-fun/serverless-adapter/actions/workflows/node.yml/badge.svg)](https://github.com/geek-fun/serverless-adapter/actions/workflows/node.yml)
