@@ -55,6 +55,7 @@ Serverless-Adapter 是一个轻量的适配层，让 **Express**、**Koa** 和 *
 - [云厂商识别](#云厂商识别)
 - [参与贡献](#参与贡献)
 - [相关项目](#相关项目)
+- [社区](#社区)
 
 ## 核心特性
 
@@ -455,6 +456,22 @@ npm run build      # TypeScript 构建
 ## 相关项目
 
 - [ServerlessInsight](https://github.com/geek-fun/serverlessinsight) —— 用 YAML 定义 Serverless 基础设施，跨阿里云、腾讯云、华为云和火山引擎部署。可以与本适配器搭配使用：ServerlessInsight 负责创建函数和网关，本适配器让你的框架应用跑在上面。
+
+## 社区
+
+扫码或微信搜索「GEEKFUN」关注公众号，获取项目动态：
+
+<p align="center">
+  <img src="docs/images/wechat_official.png" width="480" alt="微信搜一搜：GEEKFUN">
+</p>
+
+<p align="center">
+  <a href="https://x.com/geekfun_club"><img src="https://img.shields.io/badge/X-关注-000000?logo=x&logoColor=white" alt="X / Twitter" /></a>
+  &nbsp;&nbsp;&nbsp;
+  <a href="https://www.youtube.com/@geekfun-club"><img src="https://img.shields.io/badge/YouTube-订阅-FF0000?logo=youtube&logoColor=white" alt="YouTube" /></a>
+  &nbsp;&nbsp;&nbsp;
+  <a href="https://github.com/geek-fun"><img src="https://img.shields.io/badge/GitHub-关注-181717?logo=github&logoColor=white" alt="GitHub" /></a>
+</p>
 
 ## 许可证
 
