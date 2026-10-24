@@ -462,7 +462,7 @@ npm run build      # TypeScript 构建
 扫码或微信搜索「GEEKFUN」关注公众号，获取项目动态：
 
 <p align="center">
-  <img src="docs/images/wechat_official.png" width="480" alt="微信搜一搜：GEEKFUN">
+  <img src="docs/images/wechat_official.png" width="300" alt="微信搜一搜：GEEKFUN">
 </p>
 
 <p align="center">

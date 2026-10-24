@@ -495,7 +495,7 @@ passing. Open an issue first for larger changes so we can align on the design.
 Scan the QR code to follow **GEEKFUN** on WeChat (search "GEEKFUN") for project updates:
 
 <p align="center">
-  <img src="docs/images/wechat_official.png" width="480" alt="WeChat: search for GEEKFUN">
+  <img src="docs/images/wechat_official.png" width="300" alt="WeChat: search for GEEKFUN">
 </p>
 
 <p align="center">
