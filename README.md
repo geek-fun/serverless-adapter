@@ -1,29 +1,79 @@
 <div align="center">
 
-<img src="docs/brand/brand.jpg" alt="ServerlessInsight" width="360" />
-
-</div>
+<img src="docs/brand/brand.jpg" alt="Serverless-Adapter" width="360" />
 
 # Serverless-Adapter
 
-[![Node.js CI](https://github.com/geek-fun/serverless-adapter/actions/workflows/node.yml/badge.svg)](https://github.com/geek-fun/serverless-adapter/actions/workflows/node.yml)
-[![release](https://github.com/geek-fun/serverless-adapter/actions/workflows/release.yml/badge.svg)](https://github.com/geek-fun/serverless-adapter/actions/workflows/release.yml)
-[![npm version](https://badge.fury.io/js/@geek-fun%2Fserverless-adapter.svg)](https://badge.fury.io/js/@geek-fun%2Fserverless-adapter)
-[![Known Vulnerabilities](https://snyk.io/test/github/geek-fun/serverless-adapter/badge.svg)](https://snyk.io/test/github/geek-fun/serverless-adapter)
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![codecov](https://codecov.io/gh/geek-fun/serverless-adapter/graph/badge.svg?token=lw1AJuX9S9)](https://codecov.io/gh/geek-fun/serverless-adapter)
+**Run your Express, Koa, or Hono app on any serverless platform — no rewrites.**
 
-Adapter for web frameworks (Express, Koa, Hono) to run on serverless platforms across multiple cloud providers with automatic provider detection.
+**One handler. Multi-cloud. Automatic provider detection.**
+
+**Express · Koa · Hono — Aliyun FC · Tencent SCF · Volcengine veFaaS · AWS Lambda · Cloudflare Workers.**
+
+[![Release](https://img.shields.io/github/v/release/geek-fun/serverless-adapter?color=orange&label=release&logo=github)](https://github.com/geek-fun/serverless-adapter/releases)
+[![npm version](https://img.shields.io/npm/v/@geek-fun/serverless-adapter?color=orange&logo=npm)](https://www.npmjs.com/package/@geek-fun/serverless-adapter)
+[![npm downloads](https://img.shields.io/npm/dm/@geek-fun/serverless-adapter?color=orange&logo=npm)](https://www.npmjs.com/package/@geek-fun/serverless-adapter)
+[![Node.js CI](https://github.com/geek-fun/serverless-adapter/actions/workflows/node.yml/badge.svg)](https://github.com/geek-fun/serverless-adapter/actions/workflows/node.yml)
+[![codecov](https://codecov.io/gh/geek-fun/serverless-adapter/graph/badge.svg?token=lw1AJuX9S9)](https://codecov.io/gh/geek-fun/serverless-adapter)
+[![Known Vulnerabilities](https://snyk.io/test/github/geek-fun/serverless-adapter/badge.svg)](https://snyk.io/test/github/geek-fun/serverless-adapter)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg?logo=apache)](LICENSE)
+[![Stars](https://img.shields.io/github/stars/geek-fun/serverless-adapter?logo=github)](https://github.com/geek-fun/serverless-adapter/stargazers)
+
+<p>
+  <img src="https://img.shields.io/badge/Node.js_%E2%89%A5_16-339933?logo=nodedotjs&logoColor=white"/>
+  <img src="https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white"/>
+  <img src="https://img.shields.io/badge/Express-000000?logo=express&logoColor=white"/>
+  <img src="https://img.shields.io/badge/Koa-33333D"/>
+  <img src="https://img.shields.io/badge/Hono-E10098?logo=hono&logoColor=white"/>
+</p>
+<p>
+  <img src="https://img.shields.io/badge/Aliyun%20FC-FF6A00?logo=alibabacloud&logoColor=white"/>
+  <img src="https://img.shields.io/badge/Tencent%20SCF-0A9AED?logo=tencentqq&logoColor=white"/>
+  <img src="https://img.shields.io/badge/Volcengine%20veFaaS-1677FF"/>
+  <img src="https://img.shields.io/badge/AWS%20Lambda-232F3E?logo=amazonwebservices&logoColor=white"/>
+  <img src="https://img.shields.io/badge/Cloudflare%20Workers-F38020?logo=cloudflare&logoColor=white"/>
+</p>
+
+[npm](https://www.npmjs.com/package/@geek-fun/serverless-adapter) · [Releases](https://github.com/geek-fun/serverless-adapter/releases) · [Issues](https://github.com/geek-fun/serverless-adapter/issues)
+
+English · [简体中文](README.zh-CN.md)
+
+</div>
+
+---
+
+Serverless-Adapter is a thin adapter layer that runs **Express**, **Koa**, and **Hono** applications on serverless platforms across five cloud providers. Your app code never changes: the adapter translates each platform's invocation event into framework requests, and framework responses back into the platform's response envelope — with **automatic provider detection**, so the same handler deploys unchanged across clouds.
+
+## Contents
+
+- [Key Features](#key-features)
+- [Supported Cloud Providers](#supported-cloud-providers)
+- [Supported Frameworks](#supported-frameworks)
+- [Quick Start](#quick-start)
+- [API Reference](#api-reference)
+- [Timer and non-HTTP triggers](#timer-and-non-http-triggers)
+- [Provider Detection](#provider-detection)
+- [Contributing](#contributing)
+- [Related Projects](#related-projects)
+
+## Key Features
+
+- **Multi-cloud, one handler** — deploy the same app to Alibaba Cloud FC, Tencent Cloud SCF, Volcengine veFaaS, AWS Lambda, and Cloudflare Workers without per-cloud glue code.
+- **Automatic provider detection** — the adapter inspects the invocation context and routes to the right provider; an explicit override is available when you need it.
+- **Timer & non-HTTP triggers, done right** — a normalized, provider-agnostic `TimerEvent` envelope, conservative event classification, and loud failures for unmatched non-HTTP invocations instead of silently swallowed events.
+- **Framework agnostic** — Express 4/5, Koa 2/3, and Hono 4 are supported; your routes, middleware, and handlers stay untouched.
+- **TypeScript-first** — full type inference, with the handler's result type narrowing automatically once non-HTTP events are configured (`ServerlessHandler<Result>`).
+- **Lightweight** — only two runtime dependencies (`debug`, `raw-body`).
 
 ## Supported Cloud Providers
 
-| Provider               | Service                         | Status       | Trigger Type |
-| ---------------------- | ------------------------------- | ------------ | ------------ |
-| Alibaba Cloud (Aliyun) | Function Compute                | ✅ Supported | API Gateway  |
-| Tencent Cloud          | Serverless Cloud Function (SCF) | ✅ Supported | Function URL  |
-| Volcengine             | veFaaS (函数服务)               | ✅ Supported | API Gateway  |
+| Provider               | Service                         | Status       | Trigger Type                            |
+| ---------------------- | ------------------------------- | ------------ | --------------------------------------- |
+| Alibaba Cloud (Aliyun) | Function Compute                | ✅ Supported | API Gateway                             |
+| Tencent Cloud          | Serverless Cloud Function (SCF) | ✅ Supported | Function URL                            |
+| Volcengine             | veFaaS (函数服务)               | ✅ Supported | API Gateway                             |
 | AWS                    | Lambda + API Gateway            | ✅ Supported | API Gateway (REST API v1 & HTTP API v2) |
-| Cloudflare             | Workers                         | ✅ Supported | fetch (Request → Response) |
+| Cloudflare             | Workers                         | ✅ Supported | fetch (Request → Response)              |
 
 > **Note**: Tencent retired the SCF API Gateway trigger (service ended 2025-06-30); this adapter supports the Function URL (函数 URL) event-function format. Web 函数 (Web functions, raw HTTP on port 9000) mode needs no adapter and is out of scope.
 
@@ -190,12 +240,12 @@ positional form is the canonical shape for HTTP-only apps.
 
 #### Parameters
 
-| Parameter                  | Type                                    | Required | Description                                                  |
-| -------------------------- | --------------------------------------- | -------- | ------------------------------------------------------------ |
-| `app`                      | `Express \| Koa \| Hono`               | Yes      | Express, Koa, or Hono application instance                  |
-| `options.provider`         | `'aliyun' \| 'tencent' \| 'volcengine' \| 'aws' \| 'cloudflare'` | No       | Explicitly specify cloud provider (auto-detected if omitted) |
-| `options.events`           | `{ timer?, nonHttp? }`                  | No       | Handlers for non-HTTP triggers, keyed by event kind — see [Timer and non-HTTP triggers](#timer-and-non-http-triggers) |
-| `options.onUnhandledEvent` | `'error' \| 'ignore'`                   | No       | What to do with a non-HTTP invocation that has no matching `events` handler. Defaults to `'error'` (throw); `'ignore'` restores the historical behaviour — see [Timer and non-HTTP triggers](#timer-and-non-http-triggers) |
+| Parameter                  | Type                                                             | Required | Description                                                                                                                                                                                  |
+| -------------------------- | ---------------------------------------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `app`                      | `Express \| Koa \| Hono`                                         | Yes      | Express, Koa, or Hono application instance                                                                                                                                                   |
+| `options.provider`         | `'aliyun' \| 'tencent' \| 'volcengine' \| 'aws' \| 'cloudflare'` | No       | Explicitly specify cloud provider (auto-detected if omitted)                                                                                                                                  |
+| `options.events`           | `{ timer?, nonHttp? }`                                           | No       | Handlers for non-HTTP triggers, keyed by event kind — see [Timer and non-HTTP triggers](#timer-and-non-http-triggers)                                                                          |
+| `options.onUnhandledEvent` | `'error' \| 'ignore'`                                            | No       | What to do with a non-HTTP invocation that has no matching `events` handler. Defaults to `'error'` (throw); `'ignore'` restores the historical behaviour — see [Timer and non-HTTP triggers](#timer-and-non-http-triggers) |
 
 #### Returns
 
@@ -327,12 +377,12 @@ Notes:
   `'error'` (default) throws `UnsupportedEventError`; `'ignore'` restores the
   historical permissive dispatch. An explicit handler always wins.
 
-| Invocation                                 | With matching `events` handler | Default (`'error'`)                        | `'ignore'`                    |
-| ------------------------------------------ | ------------------------------ | ------------------------------------------ | ----------------------------- |
-| HTTP event                                 | handled by the framework       | handled by the framework                   | handled by the framework      |
-| Timer event                                | `events.timer` (normalized)    | `UnsupportedEventError` — invocation fails | dispatched anyway (legacy)    |
-| Recognized non-HTTP event of another kind  | —                              | `UnsupportedEventError` — invocation fails | dispatched anyway (legacy)    |
-| Unrecognized event                         | `events.nonHttp` (raw)         | `UnsupportedEventError` — invocation fails | dispatched anyway (legacy)    |
+| Invocation                                 | With matching `events` handler | Default (`'error'`)                        | `'ignore'`                 |
+| ------------------------------------------ | ------------------------------ | ------------------------------------------ | -------------------------- |
+| HTTP event                                 | handled by the framework       | handled by the framework                   | handled by the framework   |
+| Timer event                                | `events.timer` (normalized)    | `UnsupportedEventError` — invocation fails | dispatched anyway (legacy) |
+| Recognized non-HTTP event of another kind  | —                              | `UnsupportedEventError` — invocation fails | dispatched anyway (legacy) |
+| Unrecognized event                         | `events.nonHttp` (raw)         | `UnsupportedEventError` — invocation fails | dispatched anyway (legacy) |
 
 Failing the invocation matters: FC / SCF / Lambda only mark an invocation as
 failed when the handler throws, which is what puts it into logs, alerts and the
@@ -342,21 +392,21 @@ behaviour.
 
 What is recognized per provider:
 
-| Provider          | Recognized timer envelope                                                                      | Notes                                                                                                                                                   |
-| ----------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Aliyun FC3        | `{triggerTime, triggerName, payload}`                                                          | Delivered as a Buffer; plain objects (e.g. `si local`) are accepted as well                                                                              |
-| Tencent SCF       | `{Type: 'Timer', TriggerName, Time, Message}`                                                  | —                                                                                                                                                       |
+| Provider          | Recognized timer envelope                                                                       | Notes                                                                                                                                                                                                                   |
+| ----------------- | ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Aliyun FC3        | `{triggerTime, triggerName, payload}`                                                           | Delivered as a Buffer; plain objects (e.g. `si local`) are accepted as well                                                                                                                                              |
+| Tencent SCF       | `{Type: 'Timer', TriggerName, Time, Message}`                                                    | —                                                                                                                                                                                                                       |
 | Volcengine veFaaS | CloudEvents `{id, source: '/faas/event/timer/{timer_id}', type: 'faas.timer.event', time, data}` | `triggerName` is the timer id parsed from `source` (the event carries no trigger name), `triggerTime` is `time` and `payload` is `data`. The SCF-style envelope that `si local` emits is still accepted. TOS / MQ / TLS CloudEvents are `unknown` and reach `events.nonHttp` |
-| AWS               | `{version, id, 'detail-type': 'Scheduled Event', source: 'aws.events', resources: [rule ARN]}` | The rule name from `resources[0]` becomes `triggerName` (`id` as fallback) and `detail` becomes `payload`. An EventBridge **Scheduler** invoking the function with a custom input is indistinguishable from a hand-written event; it is reported as `unknown` and reaches `events.nonHttp` |
-| Cloudflare        | —                                                                                              | Cron Triggers are delivered to the Worker's separate `scheduled()` export, which this adapter never sees — see [Cloudflare boundary](#cloudflare-boundary) |
+| AWS               | `{version, id, 'detail-type': 'Scheduled Event', source: 'aws.events', resources: [rule ARN]}`   | The rule name from `resources[0]` becomes `triggerName` (`id` as fallback) and `detail` becomes `payload`. An EventBridge **Scheduler** invoking the function with a custom input is indistinguishable from a hand-written event; it is reported as `unknown` and reaches `events.nonHttp` |
+| Cloudflare        | —                                                                                               | Cron Triggers are delivered to the Worker's separate `scheduled()` export, which this adapter never sees — see [Cloudflare boundary](#cloudflare-boundary)                                                                |
 
 What is recognized as an HTTP event, per provider:
 
-| Provider          | HTTP fields                                                                              |
-| ----------------- | ---------------------------------------------------------------------------------------- |
-| Aliyun FC3 / AWS  | API Gateway shapes: `path` / `rawPath` / `httpMethod` (v1), `version: '2.0'` + `rawPath` (v2), ALB (`requestContext.elb` + `httpMethod`) |
-| Tencent SCF       | Function URL (`httpMethod`, `path` optional) and the legacy API Gateway shape (`queryStringParameters` / `requestContext`) |
-| Volcengine veFaaS | Documented API Gateway structure: `path` + `httpMethod` + `queryStringParameters` + `pathParameters`; the legacy `method` / `query` spelling is still accepted |
+| Provider          | HTTP fields                                                                                                                                                             |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Aliyun FC3 / AWS  | API Gateway shapes: `path` / `rawPath` / `httpMethod` (v1), `version: '2.0'` + `rawPath` (v2), ALB (`requestContext.elb` + `httpMethod`)                                  |
+| Tencent SCF       | Function URL (`httpMethod`, `path` optional) and the legacy API Gateway shape (`queryStringParameters` / `requestContext`)                                                 |
+| Volcengine veFaaS | Documented API Gateway structure: `path` + `httpMethod` + `queryStringParameters` + `pathParameters`; the legacy `method` / `query` spelling is still accepted             |
 
 ### Cloudflare boundary
 
@@ -418,6 +468,35 @@ The adapter automatically detects the cloud provider by examining the `context` 
 | AWS        | `awsRequestId`, `invokedFunctionArn`, `functionName`     |
 | Cloudflare | web `Request` event + `waitUntil` on context             |
 
+## Contributing
+
+Contributions are welcome! To work on the adapter locally:
+
+```bash
+git clone https://github.com/geek-fun/serverless-adapter.git
+cd serverless-adapter
+npm install
+npm test           # runs Jest with coverage — 85% thresholds on all metrics are enforced
+npm run lint:check # ESLint + Prettier
+npm run build      # TypeScript build
+```
+
+Please include tests for any new code or bug fix — the coverage gates in
+`jest.config.cjs` (85% statements / branches / functions / lines) must keep
+passing. Open an issue first for larger changes so we can align on the design.
+
+## Related Projects
+
+- [ServerlessInsight](https://github.com/geek-fun/serverlessinsight) — define your serverless infrastructure in YAML and deploy it across Alibaba Cloud, Tencent Cloud, Huawei Cloud, and Volcengine. Pair it with this adapter: ServerlessInsight provisions the function and gateway, this adapter makes your framework app run on it.
+
 ## License
 
 [Apache-2.0](LICENSE)
+
+---
+
+<div align="center">
+
+English · [简体中文](README.zh-CN.md)
+
+</div>
