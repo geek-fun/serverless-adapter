@@ -55,6 +55,7 @@ Serverless-Adapter is a thin adapter layer that runs **Express**, **Koa**, and *
 - [Provider Detection](#provider-detection)
 - [Contributing](#contributing)
 - [Related Projects](#related-projects)
+- [Community](#community)
 
 ## Key Features
 
@@ -488,6 +489,22 @@ passing. Open an issue first for larger changes so we can align on the design.
 ## Related Projects
 
 - [ServerlessInsight](https://github.com/geek-fun/serverlessinsight) — define your serverless infrastructure in YAML and deploy it across Alibaba Cloud, Tencent Cloud, Huawei Cloud, and Volcengine. Pair it with this adapter: ServerlessInsight provisions the function and gateway, this adapter makes your framework app run on it.
+
+## Community
+
+Scan the QR code to follow **GEEKFUN** on WeChat (search "GEEKFUN") for project updates:
+
+<p align="center">
+  <img src="docs/images/wechat_official.png" width="480" alt="WeChat: search for GEEKFUN">
+</p>
+
+<p align="center">
+  <a href="https://x.com/geekfun_club"><img src="https://img.shields.io/badge/X-Follow-000000?logo=x&logoColor=white" alt="X / Twitter" /></a>
+  &nbsp;&nbsp;&nbsp;
+  <a href="https://www.youtube.com/@geekfun-club"><img src="https://img.shields.io/badge/YouTube-Subscribe-FF0000?logo=youtube&logoColor=white" alt="YouTube" /></a>
+  &nbsp;&nbsp;&nbsp;
+  <a href="https://github.com/geek-fun"><img src="https://img.shields.io/badge/GitHub-Follow-181717?logo=github&logoColor=white" alt="GitHub" /></a>
+</p>
 
 ## License
 
