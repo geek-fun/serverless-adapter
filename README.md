@@ -295,6 +295,29 @@ serverlessAdapter({
 The symmetric form takes the same `provider` / `onUnhandledEvent` options; the
 positional form stays canonical for HTTP-only apps.
 
+## Runtime config (`@serverless-adapter/config`)
+
+When a deploy resolves `${config_sets.*}` references, the CLI injects
+`SI_CONFIG_TOKEN` + `SI_CONSOLE_URL` into the function environment. The config
+submodule reads the merged snapshot at runtime — hot updates land by moving the
+`latest` tag in the Console, with no redeploy:
+
+```typescript
+import { siConfig } from '@geek-fun/serverless-adapter/config';
+
+const si = siConfig.init(); // async prefetch, parallel with cold start
+
+export const handler = async () => {
+  const host = await si.get('db.host');        // inferred scalar
+  const pwd = await si.getSecret('db.password'); // decrypted secret
+  const snap = await si.snapshot(); // consistent view + snapshotVersion
+};
+```
+
+Snapshots cache in memory (60s TTL) and fail soft: a failed refresh keeps
+serving the last-good snapshot. Local development reads the snapshot written by
+`si local` (`.serverlessinsight/local-config.json`) when no token is present.
+
 ## Timer and non-HTTP triggers
 
 On Aliyun FC, Tencent SCF, Volcengine veFaaS and AWS Lambda **one function has one
