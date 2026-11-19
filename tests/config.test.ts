@@ -192,6 +192,31 @@ describe('siConfig runtime SDK (epic #53 P2)', () => {
     );
   });
 
+  it('init() without options reads env defaults (global fetch path, fails offline-fast)', async () => {
+    // No options object at all — covers the `options?.x ??` env-fallback
+    // branches and the `?? fetch` default. The URL points at a closed port so
+    // the global fetch fails fast and offline.
+    process.env['SI_CONSOLE_URL'] = 'http://127.0.0.1:1';
+    process.env['SI_CONFIG_TOKEN'] = 'sirt_com_env_secret';
+    const si = siConfig.init();
+    await expect(si.get('db.host')).rejects.toThrow();
+  });
+
+  it('get() maps "false" strings to booleans', async () => {
+    const fetchMock = jest.fn().mockResolvedValue(
+      jsonResponse({
+        code: 2000,
+        data: {
+          stage: 'prod',
+          snapshotVersion: 1,
+          entries: [{ key: 'feature.flag', value: 'false', secret: false }],
+        },
+      }),
+    );
+    const si = makeRuntime(fetchMock);
+    await expect(si.get('feature.flag')).resolves.toBe(false);
+  });
+
   it('snapshot() exposes the consistent view with its version', async () => {
     const fetchMock = jest.fn().mockResolvedValue(jsonResponse(snapshotBody(sampleEntries, 9)));
     const si = makeRuntime(fetchMock);

@@ -95,7 +95,9 @@ export const siConfig = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          // The config guard above ensures a token exists before fetching, so
+          // the Authorization header is always present here.
+          Authorization: `Bearer ${token}`,
         },
         ...(options?.include ? { body: JSON.stringify({ include: options.include }) } : {}),
       });
