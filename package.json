@@ -78,5 +78,15 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.57.2"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    },
+    "./config": {
+      "types": "./dist/src/config/index.d.ts",
+      "default": "./dist/src/config/index.js"
+    }
   }
 }
