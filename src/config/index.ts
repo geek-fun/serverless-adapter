@@ -110,9 +110,11 @@ const VALID_ITEM_TYPES = new Set<ConfigSetItemType>([
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
+/* istanbul ignore next -- non-Node edge runtime guard */
 const readEnv = (name: string): string =>
   typeof process !== 'undefined' && process.env ? (process.env[name] ?? '') : '';
 
+/* istanbul ignore next -- dynamic Node-only fs/path loader for Cloudflare Workers compatibility */
 const loadNodeFsPath = (): NodeFsPath | null => {
   if (typeof require !== 'function') return null;
   try {
@@ -133,6 +135,10 @@ const loadNodeFsPath = (): NodeFsPath | null => {
     return null;
   }
 };
+
+/* istanbul ignore next -- non-Node edge runtime guard */
+const readCwd = (): string =>
+  typeof process !== 'undefined' && typeof process.cwd === 'function' ? process.cwd() : '.';
 
 const normalizeSource = (raw: unknown): ConfigSetSource | undefined => {
   if (!isRecord(raw)) return undefined;
@@ -266,11 +272,10 @@ export const createConfigSet = (options?: ConfigSetOptions): ConfigSet => {
   const readLocalSnapshot = (): ConfigSetSnapshot | null => {
     if (disableLocalFile) return null;
     const node = loadNodeFsPath();
+    /* istanbul ignore next -- non-Node edge runtime guard */
     if (!node) return null;
     try {
-      const cwd =
-        typeof process !== 'undefined' && typeof process.cwd === 'function' ? process.cwd() : '.';
-      const file = localFilePath ?? node.resolve(cwd, LOCAL_SNAPSHOT_PATH);
+      const file = localFilePath ?? node.resolve(readCwd(), LOCAL_SNAPSHOT_PATH);
       if (!node.existsSync(file)) return null;
       const parsed: unknown = JSON.parse(node.readFileSync(file, 'utf-8'));
       const normalized = normalizeConfigSetSnapshot(parsed);
@@ -281,15 +286,10 @@ export const createConfigSet = (options?: ConfigSetOptions): ConfigSet => {
   };
 
   const fetchSnapshot = async (): Promise<ConfigSetSnapshot> => {
-    const controller = typeof AbortController === 'function' ? new AbortController() : undefined;
-    const timer =
-      controller && timeoutMs > 0 ? setTimeout(() => controller.abort(), timeoutMs) : undefined;
-    if (
-      timer &&
-      typeof timer === 'object' &&
-      'unref' in timer &&
-      typeof timer.unref === 'function'
-    ) {
+    const controller = new AbortController();
+    const timer = timeoutMs > 0 ? setTimeout(() => controller.abort(), timeoutMs) : undefined;
+    /* istanbul ignore next -- timer.unref is Node-only */
+    if (timer && typeof timer.unref === 'function') {
       timer.unref();
     }
     try {
@@ -300,7 +300,7 @@ export const createConfigSet = (options?: ConfigSetOptions): ConfigSet => {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(include ? { include } : {}),
-        ...(controller ? { signal: controller.signal } : {}),
+        signal: controller.signal,
       });
       if (!response.ok) {
         throw new Error(`ConfigSet fetch failed: HTTP ${response.status}`);

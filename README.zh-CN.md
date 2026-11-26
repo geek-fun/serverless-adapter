@@ -285,6 +285,26 @@ serverlessAdapter({
 
 对称形式接受相同的 `provider` / `onUnhandledEvent` 选项；纯 HTTP 应用仍然以位置参数形式为标准写法。
 
+## 运行时配置（`@geek-fun/serverless-adapter/config`）
+
+当部署解析了 `${config_sets.*}` 引用时，CLI 会自动向函数环境变量注入
+`SI_CONFIG_TOKEN` 与 `SI_CONSOLE_URL`。该子模块用于在函数运行时读取合并后的配置快照——在 Console 移动 `latest` 标签即可完成热更新，无需重新部署：
+
+```typescript
+import { createConfigSet } from '@geek-fun/serverless-adapter/config';
+
+const config = createConfigSet(); // 异步预取，与函数冷启动并行
+
+export const handler = async () => {
+  const host = await config.get('db.host');          // 按条目类型解析（string/number/boolean/json）
+  const pwd = await config.getSecret('db.password'); // 已解密的密钥字符串
+  const snap = await config.snapshot();              // 不可变快照视图 + snapshotVersion
+  await config.refresh();                            // 强制刷新（失败时保留最近一次成功快照）
+};
+```
+
+快照在内存中缓存（默认 60s TTL、5s 请求超时与失败退避）并软降级：刷新失败时会继续返回最近一次可用快照。本地开发无 token 时会自动读取 `si local` 写入的 `.serverlessinsight/local-config.json`。
+
 ## 定时器与非 HTTP 触发器
 
 在阿里云 FC、腾讯云 SCF、火山引擎 veFaaS 和 AWS Lambda 上，**一个函数只有一个 handler，所有触发器类型都以不同的事件结构投递给它**。因此定时触发器、队列事件或对象存储通知会和 HTTP 请求一样到达同一个 handler —— 但它既没有可构建的请求，也不需要满足 HTTP 响应契约。
