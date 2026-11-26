@@ -209,6 +209,12 @@ describe('createConfigSet runtime SDK (epic #53 P2)', () => {
     await new Promise((resolve) => setTimeout(resolve, 25));
     await expect(config.get('db.host')).resolves.toBe('db.prod.internal');
     expect(fetchMock).toHaveBeenCalledTimes(2);
+    // Disable timeout (timeoutMs: 0) executes cleanly without setting an abort timer.
+    const noTimeoutFetch = jest
+      .fn()
+      .mockResolvedValue(jsonResponse(saasSnapshotBody(sampleEntries)));
+    const noTimeoutConfig = makeConfigSet(noTimeoutFetch, { timeoutMs: 0, prefetch: false });
+    await expect(noTimeoutConfig.get('db.host')).resolves.toBe('db.prod.internal');
   });
 
   it('surfaces errors when initial fetch fails and no cached snapshot exists', async () => {
@@ -297,6 +303,13 @@ describe('createConfigSet runtime SDK (epic #53 P2)', () => {
       expect((await config.snapshot()).stage).toBe('prod');
       expect(fetchMock).not.toHaveBeenCalled();
 
+      // Local mode without `include` returns the full snapshot.
+      const unfiltered = createConfigSet({
+        localFilePath: localFile,
+        fetchImpl: fetchMock as unknown as typeof fetch,
+      });
+      expect((await unfiltered.snapshot()).entries).toHaveLength(3);
+
       // Include filter excludes non-matching entries in local mode too.
       const filtered = createConfigSet({
         localFilePath: localFile,
@@ -362,10 +375,11 @@ describe('createConfigSet runtime SDK (epic #53 P2)', () => {
   describe('pure helpers: normalizeConfigSetSnapshot & parseConfigSetValue', () => {
     it('rejects non-objects and malformed entries cleanly', () => {
       expect(normalizeConfigSetSnapshot(null)).toBeNull();
+      expect(normalizeConfigSetSnapshot({ entries: [null] })).toBeNull();
       expect(normalizeConfigSetSnapshot({ entries: [{ key: 123, value: 'x' }] })).toBeNull();
       expect(
         normalizeConfigSetSnapshot({
-          entries: [{ key: 'a.b', value: 'x', source: { name: 'a' } }],
+          entries: [{ key: 'a.b', value: 'x', source: { name: 42 } }],
         }),
       ).toEqual({
         snapshotVersion: 0,
