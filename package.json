@@ -88,5 +88,12 @@
       "types": "./dist/src/config/index.d.ts",
       "default": "./dist/src/config/index.js"
     }
+  },
+  "typesVersions": {
+    "*": {
+      "config": [
+        "dist/src/config/index.d.ts"
+      ]
+    }
   }
 }
